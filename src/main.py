@@ -54,7 +54,7 @@ async def main() -> None:
     value_int16 = pstg_client.convert_from_registers(
         holding_regs.registers, data_type=pstg_client.DATATYPE.UINT16
     )
-    logger.info("Got int32: %s", value_int16)
+    logger.info("Got int16: %s", value_int16)
     logger.info("Close connection")
     pstg_client.close()
 
