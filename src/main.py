@@ -28,7 +28,7 @@ async def main() -> None:
     try:
         logger.info("Reading input registers (FC04)")
         input_regs = await pstg_client.read_input_registers(
-            0, count=2, device_id=1
+            0, count=1, device_id=1
         )
         logger.info("Registers (FC04) have been read!")
     except ModbusException as err:
@@ -41,7 +41,7 @@ async def main() -> None:
     try:
         logger.info("Reading holding registers (FC03)")
         holding_regs = await pstg_client.read_holding_registers(
-            0, count=2, device_id=1
+            0, count=1, device_id=1
         )
         logger.info("Registers (FC03) have been read!")
     except ModbusException as err:
