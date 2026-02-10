@@ -3,7 +3,6 @@ import logging
 
 from pymodbus import ModbusException
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.logging import Log
 from pymodbus.pdu import ModbusPDU
 
 logger = logging.getLogger(__name__)
