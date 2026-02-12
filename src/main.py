@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 async def main() -> None:
     input_regs: ModbusPDU | None = None
     holding_regs: ModbusPDU | None = None
-    pstg_client = AsyncModbusTcpClient(host="10.0.6.10", port=506)
+
     logger.info("Open Connection")
+    pstg_client = AsyncModbusTcpClient(host="10.0.6.10", port=506)
+
     try:
         is_ok: bool = await pstg_client.connect()
     except Exception as err:
@@ -21,22 +23,22 @@ async def main() -> None:
     if not is_ok or not pstg_client.connected:
         logger.error("Client is not connected")
         raise ConnectionError("Client is not connected")
-    # assert pstg_client.connected, (
-    #     "Connection is not connected!"
-    # )  # из-за асинхронности может обманывать
     logger.info("Connection is opened!")
+
     try:
         logger.info("Reading input registers (FC04)")
         input_regs = await pstg_client.read_input_registers(
             0, count=1, device_id=1
         )
         logger.info("Registers (FC04) have been read!")
+        if (input_regs) and input_regs.isError():
+            err_msg = "Received exception from device!"
+            logger.error(err_msg)
+            pstg_client.close()
+            raise RuntimeError(err_msg)
     except ModbusException as err:
         logger.error("Received ModbusException(%s) from library", err)
-        if (input_regs) and (input_regs.isError()):
-            logger.error("Received exception from device (%s)", err)
-            pstg_client.close()
-            raise err
+        pstg_client.close()
 
     try:
         logger.info("Reading holding registers (FC03)")
@@ -44,16 +46,38 @@ async def main() -> None:
             0, count=1, device_id=1
         )
         logger.info("Registers (FC03) have been read!")
+        if (holding_regs) and holding_regs.isError():
+            err_msg = "Received exception from device!"
+            logger.error(err_msg)
+            pstg_client.close()
+            raise RuntimeError(err_msg)
     except ModbusException as err:
         logger.error("Received ModbusException(%s) from library", err)
-        if (holding_regs) and (holding_regs.isError()):
-            logger.error("Received exception from device (%s)", err)
         pstg_client.close()
         raise err
-    value_int16 = pstg_client.convert_from_registers(
-        holding_regs.registers, data_type=pstg_client.DATATYPE.UINT16
-    )
-    logger.info("Got int16: %s", value_int16)
+
+    # value_int16 = pstg_client.convert_from_registers(
+    #     holding_regs.registers, data_type=pstg_client.DATATYPE.UINT16
+    # )
+
+    if holding_regs and (not holding_regs.isError()):
+        value_int16_holding = holding_regs.registers[0]
+        bits_hold = f"{value_int16_holding:016b}"
+        logger.info(
+            "Got holding registers (FC03) int16: %s (%s)",
+            value_int16_holding,
+            bits_hold,
+        )
+
+    if input_regs and (not input_regs.isError()):
+        value_int16_input = input_regs.registers[0]
+        bits_inp = f"{value_int16_input:016b}"
+        logger.info(
+            "Got input registers (FC04) int16: %s (%s)",
+            value_int16_input,
+            bits_inp,
+        )
+
     logger.info("Close connection")
     pstg_client.close()
 
