@@ -1,3 +1,7 @@
+from dataclasses import dataclass
+
+
+@dataclass
 class ErrorInfo:
     kind: str  # "transport" | "device"
     message: str
