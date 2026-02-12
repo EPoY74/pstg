@@ -129,30 +129,33 @@ async def main() -> None:
 
     holding_regs: ModbusPDU | None = None
     input_regs: ModbusPDU | None = None
-    is_read_ok: bool = True
+    need_fallback: bool = False
 
     pstg_client = await open_connection_modbus_tcp(
         ip_host="10.0.6.10", ip_port=506
     )
-
     try:
-        logger.info("Reading input registers (FC04)")
-        input_regs = await read_fc04_input_register(
-            pstg_client, offset=0, read_count=1, plc_id=1
-        )
-        logger.info("Registers (FC04) have been read!")
-    except RuntimeError as err:
-        is_read_ok = False
-        logger.warning("Read failed: %s", err)
-        # raise RuntimeError("FC04 read failed in poll:") from err
-
-    if not is_read_ok:
         try:
-            holding_regs = await read_fc03_holding_register(
+            logger.info("Reading input registers (FC04)")
+            input_regs = await read_fc04_input_register(
                 pstg_client, offset=0, read_count=1, plc_id=1
             )
+            logger.info("Registers (FC04) have been read!")
         except RuntimeError as err:
-            raise RuntimeError("FC03 read failed in poll:") from err
+            need_fallback = True
+            logger.warning("Read failed: %s", err)
+
+        if need_fallback:
+            try:
+                holding_regs = await read_fc03_holding_register(
+                    pstg_client, offset=0, read_count=1, plc_id=1
+                )
+            except RuntimeError as err:
+                raise RuntimeError(
+                    "FC03 (and FC04 earler) read failed in poll:"
+                ) from err
+    finally:
+        pstg_client.close()
 
     if input_regs and (not input_regs.isError()):
         value_int16_input = input_regs.registers[0]
@@ -163,7 +166,7 @@ async def main() -> None:
             bits_inp,
         )
 
-    if not is_read_ok:
+    if not need_fallback:
         if holding_regs and (not holding_regs.isError()):
             value_int16_holding = holding_regs.registers[0]
             bits_hold = f"{value_int16_holding:016b}"
@@ -172,7 +175,7 @@ async def main() -> None:
                 value_int16_holding,
                 bits_hold,
             )
-        is_read_ok = True
+        need_fallback = True
     logger.info("Close connection")
 
 
