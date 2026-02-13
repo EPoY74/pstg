@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class ModbusDeviceReadSennings:
+class ModbusDeviceReadSettings:
     """
     Конфигурация устройства, с которого считываем данные.
 
