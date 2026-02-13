@@ -3,7 +3,7 @@ import logging
 
 from pymodbus.pdu import ModbusPDU
 
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSennings
+from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.modbus_config import ModbusConfig
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
 from pstg.drivers.read_fc03_holding_register import read_fc03_holding_register
@@ -25,7 +25,7 @@ def get_modbus_config() -> ModbusConfig:
     )
 
 
-def get_device_read_settings() -> ModbusDeviceReadSennings:
+def get_device_read_settings() -> ModbusDeviceReadSettings:
     #  ID устройства, с которого считываем данные=
     DEVICE_ID: int = 1
 
@@ -37,12 +37,12 @@ def get_device_read_settings() -> ModbusDeviceReadSennings:
     # Правило Modbus: значения могут занимать несколько регистров
     #  (напр. float32 обычно = 2 регистра)
     READ_DATA_COUNT: int = 1
-    return ModbusDeviceReadSennings(
+    return ModbusDeviceReadSettings(
         device_id=DEVICE_ID, offset=DATA_OFFSET, read_count=READ_DATA_COUNT
     )
 
 
-async def poll_device(device_config: ModbusConfig) -> None:
+async def poll_device(device_config: ModbusConfig, device_poll_settings: ModbusDeviceReadSettings) -> None:
     readed_data: ModbusPDU | None = None
 
     device_being_polled = await open_connection_modbus_tcp(
@@ -51,28 +51,31 @@ async def poll_device(device_config: ModbusConfig) -> None:
     try:
         readed_data = await read_fc04_input_register(
             device_being_polled,
-            offset=ModbusDeviceReadSennings.offset,
-            read_count=ModbusDeviceReadSennings.read_count,
-            plc_id=ModbusDeviceReadSennings.device_id,
+            offset=device_poll_settings.offset,
+            read_count=device_poll_settings.read_count,
+            plc_id=device_poll_settings.device_id,
         )
         if (readed_data) and (readed_data.isError is True):
             readed_data = await read_fc03_holding_register(
                 device_being_polled,
-                offset=ModbusDeviceReadSennings.offset,
-                read_count=ModbusDeviceReadSennings.read_count,
-                plc_id=ModbusDeviceReadSennings.device_id,
+                offset=device_poll_settings.offset,
+                read_count=device_poll_settings.read_count,
+                plc_id=device_poll_settings.device_id,
             )
+            print(readed_data)
 
     finally:
         device_being_polled.close()
 
 
-async def main(device_config: ModbusConfig) -> None:
+async def main(device_config: ModbusConfig, device_poll_settengs: ModbusDeviceReadSettings) -> None:
     while True:
-        await poll_device(device_config)
+        await poll_device(device_config, device_poll_settengs)
+        await asyncio.sleep(0.5)
 
 
 if __name__ == "__main__":
     # device_config: ModbusConfig = await get_modbus_config()
 
-    asyncio.run(main(get_modbus_config()), debug=True)
+    asyncio.run(main(get_modbus_config(),
+                get_device_read_settings()), debug=True)
