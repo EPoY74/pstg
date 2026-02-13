@@ -3,11 +3,11 @@ import logging
 
 from pymodbus.pdu import ModbusPDU
 
-from domain.modbus_device_read_settings import ModbusDeviceReadSennings
-from domain.modbus_config import ModbusConfig
-from drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
-from drivers.read_fc03_holding_register import read_fc03_holding_register
-from drivers.read_fc04_input_regoster import read_fc04_input_register
+from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSennings
+from pstg.domain.modbus_config import ModbusConfig
+from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
+from pstg.drivers.read_fc03_holding_register import read_fc03_holding_register
+from pstg.drivers.read_fc04_input_regoster import read_fc04_input_register
 
 
 # Выше данной функции другие фунции не писать! Только импорты и т.д.!
@@ -62,6 +62,7 @@ async def poll_device(device_config: ModbusConfig) -> None:
                 read_count=ModbusDeviceReadSennings.read_count,
                 plc_id=ModbusDeviceReadSennings.device_id,
             )
+
     finally:
         device_being_polled.close()
 
