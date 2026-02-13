@@ -34,11 +34,6 @@ async def read_fc04_input_register(
             raise RuntimeError(
                 f"FC04 returned None: plc_id={plc_id} offset={offset} count={read_count}"
             )
-        if (input_regs) and input_regs.isError():
-            raise RuntimeError(
-                f"FC04 device exception: plc_id={plc_id} offset={offset} "
-                f"count={read_count}: {input_regs!r}"
-            )
     except ModbusException as err:
         raise RuntimeError(
             f"FC04 transport/library error: plc_id={plc_id} offset={offset} "
