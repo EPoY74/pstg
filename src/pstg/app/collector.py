@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.pdu import ModbusPDU
 
 from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
@@ -13,6 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 # Выше данной функции другие фунции не писать! Только импорты и т.д.!
+def init_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+
 def get_modbus_config() -> ModbusConfig:
     # IP адрес устройства, с которого получаем данные
     DEVICE_IP: str = "10.0.6.10"
@@ -45,22 +53,11 @@ def get_device_read_settings() -> ModbusDeviceReadSettings:
 
 
 async def poll_device(
-    device_config: ModbusConfig, device_poll_settings: ModbusDeviceReadSettings
+    device_being_polled: AsyncModbusTcpClient,
+    device_poll_settings: ModbusDeviceReadSettings,
 ) -> None:
     readed_data: ModbusPDU | None = None
-    logging.info(
-        "Поднимаю коннект по ip %s порт %s",
-        device_config.host,
-        device_config.port,
-    )
-    device_being_polled = await open_connection_modbus_tcp(
-        device_config.host, device_config.port
-    )
-    logging.info(
-        "Коннект по ip %s порт %s поднят успешно!",
-        device_config.host,
-        device_config.port,
-    )
+
     try:
         logging.info("Читаю порты fc04")
         readed_data = await read_fc04_input_register(
@@ -82,34 +79,55 @@ async def poll_device(
         logging.error("Ошибка FC04 (FC03): %S", str(err))
 
     finally:
-        logging.info(
-            "Закрываю Коннект по ip %s порт %s!",
-            device_config.host,
-            device_config.port,
-        )
-        device_being_polled.close()
-        logging.info("Коннект закрыт")
+        pass
 
 
 async def main(
     device_config: ModbusConfig, device_poll_settengs: ModbusDeviceReadSettings
 ) -> None:
-    logging.info("Запуск цикла опроса.")
-    while True:
-        await poll_device(device_config, device_poll_settengs)
-        await asyncio.sleep(0.5)
+
+    device_being_polled: AsyncModbusTcpClient | None = None
+    try:
+        logging.info("Запуск цикла опроса.")
+        logging.info(
+            "Поднимаю коннект по ip %s порт %s",
+            device_config.host,
+            device_config.port,
+        )
+        device_being_polled = await open_connection_modbus_tcp(
+            device_config.host, device_config.port
+        )
+        logging.info(
+            "Коннект по ip %s порт %s поднят успешно!",
+            device_config.host,
+            device_config.port,
+        )
+        while True:
+            await poll_device(device_being_polled, device_poll_settengs)
+            await asyncio.sleep(1)
+    finally:
+        logging.info(
+            "Закрываю Коннект по ip %s порт %s!",
+            device_config.host,
+            device_config.port,
+        )
+        if device_being_polled:
+            device_being_polled.close()
+        logging.info("Коннект закрыт")
 
 
 if __name__ == "__main__":
     # device_config: ModbusConfig = await get_modbus_config()
     # ✅ Настройка логов только при запуске как скрипт
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    try:
+        init_logging()
 
-    logging.info("Запуск Pump Station Telemetry Gateway")
-    asyncio.run(
-        main(get_modbus_config(), get_device_read_settings()), debug=True
-    )
-    logging.info("Остановка Pump Station Telemetry Gateway")
+        logging.info("Запуск Pump Station Telemetry Gateway")
+        asyncio.run(
+            main(get_modbus_config(), get_device_read_settings()), debug=False
+        )
+
+    except KeyboardInterrupt:
+        logging.info("Пользователь нажал Ctrl+C")
+    finally:
+        logging.info("Остановка Pump Station Telemetry Gateway")
