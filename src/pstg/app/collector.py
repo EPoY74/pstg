@@ -4,6 +4,7 @@ import logging
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.pdu import ModbusPDU
 
+from pstg.domain import modbus_config
 from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.modbus_config import ModbusConfig
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
@@ -29,7 +30,7 @@ def get_modbus_config() -> ModbusConfig:
     DEVICE_PORT: int = 506
 
     #  Период опроса устройства
-    DEVICE_POLL_INTERVAL_S: float = 0.5
+    DEVICE_POLL_INTERVAL_S: float = 2
     return ModbusConfig(
         host=DEVICE_IP, port=DEVICE_PORT, poll_interval_s=DEVICE_POLL_INTERVAL_S
     )
@@ -46,7 +47,7 @@ def get_device_read_settings() -> ModbusDeviceReadSettings:
     # Пример: 16-bit word
     # Правило Modbus: значения могут занимать несколько регистров
     #  (напр. float32 обычно = 2 регистра)
-    READ_DATA_COUNT: int = 1
+    READ_DATA_COUNT: int = 12
     return ModbusDeviceReadSettings(
         device_id=DEVICE_ID, offset=DATA_OFFSET, read_count=READ_DATA_COUNT
     )
@@ -59,37 +60,55 @@ async def poll_device(
     readed_data: ModbusPDU | None = None
 
     try:
-        logging.info("Читаю порты fc04")
+        logger.info("Читаю регистры fc04")
         readed_data = await read_fc04_input_register(
             device_being_polled,
             offset=device_poll_settings.offset,
             read_count=device_poll_settings.read_count,
             plc_id=device_poll_settings.device_id,
         )
-        if (readed_data) and (readed_data.isError is True):
-            logging.info("Ошибка от PLC.Порты fc04")
+        if ((readed_data)
+            and (
+            (readed_data.isError() is True)
+            or (readed_data.exception_code != 0)
+        )):
+            logger.info("Ошибка от PLC. Регистры - fc04")
+            logger.info("Код ошибки: %s", readed_data.exception_code)
+            readed_data = None
+            logger.info("Читаю регистры fc03")
             readed_data = await read_fc03_holding_register(
                 device_being_polled,
                 offset=device_poll_settings.offset,
                 read_count=device_poll_settings.read_count,
                 plc_id=device_poll_settings.device_id,
             )
-            print(readed_data)
-    except RuntimeError as err:
-        logging.error("Ошибка FC04 (FC03): %S", str(err))
+            if ((readed_data)
+                and (
+                (readed_data.isError() is True)
+                or (readed_data.exception_code != 0)
+            )):
+                logger.info("Ошибка от PLC. Регистры - fc03")
+                logger.info("Код ошибки: %s", readed_data.exception_code)
 
+            # logger.info("Данные: %s", readed_data.registers[1])
+    except RuntimeError as err:
+        logger.error("Ошибка FC04 (FC03): %s", err)
     finally:
         pass
+    if readed_data:
+        logger.info("Данные: %s", readed_data.registers)
+        logger.info("Exception code: %s",
+                    readed_data.exception_code)
 
 
 async def main(
-    device_config: ModbusConfig, device_poll_settengs: ModbusDeviceReadSettings
+    device_config: ModbusConfig, device_poll_settings: ModbusDeviceReadSettings
 ) -> None:
 
     device_being_polled: AsyncModbusTcpClient | None = None
     try:
-        logging.info("Запуск цикла опроса.")
-        logging.info(
+        logger.info("Запуск цикла опроса.")
+        logger.info(
             "Поднимаю коннект по ip %s порт %s",
             device_config.host,
             device_config.port,
@@ -97,23 +116,24 @@ async def main(
         device_being_polled = await open_connection_modbus_tcp(
             device_config.host, device_config.port
         )
-        logging.info(
+        logger.info(
             "Коннект по ip %s порт %s поднят успешно!",
             device_config.host,
             device_config.port,
         )
         while True:
-            await poll_device(device_being_polled, device_poll_settengs)
-            await asyncio.sleep(1)
+            await poll_device(device_being_polled, device_poll_settings)
+
+            await asyncio.sleep(device_config.poll_interval_s)
     finally:
-        logging.info(
+        logger.info(
             "Закрываю Коннект по ip %s порт %s!",
             device_config.host,
             device_config.port,
         )
         if device_being_polled:
             device_being_polled.close()
-        logging.info("Коннект закрыт")
+        logger.info("Коннект закрыт")
 
 
 if __name__ == "__main__":
@@ -122,12 +142,12 @@ if __name__ == "__main__":
     try:
         init_logging()
 
-        logging.info("Запуск Pump Station Telemetry Gateway")
+        logger.info("Запуск Pump Station Telemetry Gateway")
         asyncio.run(
             main(get_modbus_config(), get_device_read_settings()), debug=False
         )
 
     except KeyboardInterrupt:
-        logging.info("Пользователь нажал Ctrl+C")
+        logger.info("Пользователь нажал Ctrl+C")
     finally:
-        logging.info("Остановка Pump Station Telemetry Gateway")
+        logger.info("Остановка Pump Station Telemetry Gateway")
