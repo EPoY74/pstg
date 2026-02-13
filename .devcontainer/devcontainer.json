@@ -21,7 +21,8 @@
         "ms-python.mypy-type-checker",
         "ms-python.pylint",
         "njpwerner.autodocstrin",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+        "gruntfuggly.todo-tree"
       ],
       "settings": {
         "python.defaultInterpreterPath": ".venv/bin/python",
