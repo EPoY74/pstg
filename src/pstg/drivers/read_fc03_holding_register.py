@@ -19,7 +19,6 @@ async def read_fc03_holding_register(
         device_id (int): ID устройства, с которого считываем данные
     Raises:
         RuntimeError: FC04 returned None...
-        RuntimeError: FC04 device exception...
         RuntimeError: FC04 transport/library error...
     Returns:
         ModbusPDU | None: Возвращает прочитанные регистры
@@ -33,11 +32,6 @@ async def read_fc03_holding_register(
         if holding_regs is None:
             raise RuntimeError(
                 f"FC03 returned None: plc_id={plc_id} offset={offset} count={read_count}"
-            )
-        if (holding_regs) and holding_regs.isError():
-            raise RuntimeError(
-                f"FC03 device exception: plc_id={plc_id} offset={offset} "
-                f"count={read_count}: {holding_regs!r}"
             )
     except ModbusException as err:
         raise RuntimeError(
