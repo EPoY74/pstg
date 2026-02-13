@@ -9,5 +9,5 @@ class ConnectionState(str, Enum):
         DOWN: Соединение отсутствует
     """
 
-    UP = ("UP",)
+    UP = "UP"
     DOWN = "DOWN"
