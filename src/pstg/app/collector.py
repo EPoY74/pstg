@@ -55,6 +55,7 @@ def get_device_read_settings() -> ModbusDeviceReadSettings:
 async def poll_device(
     device_being_polled: AsyncModbusTcpClient,
     device_poll_settings: ModbusDeviceReadSettings,
+    is_not_correct_reading: bool | None = None
 ) -> None:
     readed_data: ModbusPDU | None = None
 
@@ -66,14 +67,31 @@ async def poll_device(
             read_count=device_poll_settings.read_count,
             plc_id=device_poll_settings.device_id,
         )
+        is_not_correct_reading = False
         if ((readed_data)
             and (
             (readed_data.isError() is True)
             or (readed_data.exception_code != 0)
         )):
-            logger.info("Ошибка от PLC. Регистры - fc04")
-            logger.info("Код ошибки: %s", readed_data.exception_code)
+            is_not_correct_reading = True
+            logger.warning
+            ("Ошибка от PLC. Регистры - fc04")
+            logger.warning("Код ошибки: %s", readed_data.exception_code)
             readed_data = None
+
+    except RuntimeError as err:
+        # logger.warning
+        # if ((readed_data)
+        #     and (
+        #     (readed_data.isError() is True)
+        #     or (readed_data.exception_code != 0)
+        # )):
+        logger.warning("Ошибка от PLC. Регистры - fc04")
+        logger.warning("RuntimeError: %s", err)
+        readed_data = None
+
+    if is_not_correct_reading:
+        try:
             logger.info("Читаю регистры fc03")
             readed_data = await read_fc03_holding_register(
                 device_being_polled,
@@ -88,16 +106,12 @@ async def poll_device(
             )):
                 logger.info("Ошибка от PLC. Регистры - fc03")
                 logger.info("Код ошибки: %s", readed_data.exception_code)
-
-            # logger.info("Данные: %s", readed_data.registers[1])
-    except RuntimeError as err:
-        logger.error("Ошибка FC04 (FC03): %s", err)
-    finally:
-        pass
-    if readed_data:
-        logger.info("Данные: %s", readed_data.registers)
-        logger.info("Exception code: %s",
-                    readed_data.exception_code)
+        except RuntimeError as err:
+            logger.error("Ошибка от PLC. Регистры FC03: %s", err)
+        if readed_data:
+            logger.info("Данные: %s", readed_data.registers)
+            logger.info("Exception code: %s",
+                        readed_data.exception_code)
 
 
 async def main(
