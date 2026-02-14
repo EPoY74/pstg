@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from error_info import ErrorInfo
+from pstg.domain.error_info import ErrorInfo
 
 
 @dataclass

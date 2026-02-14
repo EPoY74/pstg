@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from domain.raw_block_result import RawBlockResult
-from domain.connection_state import ConnectionState
+from pstg.domain.raw_block_result import RawBlockResult
+from pstg.domain.connection_state import ConnectionState
 
 
 @dataclass

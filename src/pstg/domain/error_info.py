@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from domain.kind_state import KindState
+from pstg.domain.kind_state import KindState
 
 
 @dataclass
