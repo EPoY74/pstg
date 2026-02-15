@@ -18,6 +18,9 @@ async def open_connection_modbus_tcp(
     """
 
     # logger.info("Open Connection")
+
+    #  TODO Подумать и реализовать?  - самостоятельный контроль за
+    # повторными подключениями. Оценить необходимость усложнения кода
     pstg_client = AsyncModbusTcpClient(
         host=ip_host, port=ip_port, reconnect_delay=1, reconnect_delay_max=60, timeout=3, retries=3)
     #  ConnectionException выкидивает,  time  - in seconds
