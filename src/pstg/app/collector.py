@@ -1,10 +1,16 @@
 import asyncio
 import logging
+import time
 
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.exceptions import ConnectionException
 from pymodbus.pdu import ModbusPDU
 
+
+from pstg.app.modbus_corfig import get_modbus_config
+from pstg.app.read_config import get_device_read_settings
+
+from pstg.domain.error_info import ErrorInfo
+from pstg.domain.kind_state import KindState
 from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.modbus_config import ModbusConfig
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
@@ -24,85 +30,151 @@ def init_logging():
     )
 
 
-def get_modbus_config() -> ModbusConfig:
-    # IP адрес устройства, с которого получаем данные
-    DEVICE_IP: str = "10.0.6.10"
-
-    #  Порт, через который работаем с устройством
-    DEVICE_PORT: int = 506
-
-    #  Период опроса устройства
-    DEVICE_POLL_INTERVAL_S: float = 2
-    return ModbusConfig(
-        host=DEVICE_IP, port=DEVICE_PORT, poll_interval_s=DEVICE_POLL_INTERVAL_S
-    )
-
-
-def get_device_read_settings() -> ModbusDeviceReadSettings:
-    #  ID устройства, с которого считываем данные=
-    DEVICE_ID: int = 1
-
-    # Начальное смещение, с которого считаывем
-    DATA_OFFSET: int = 0
-
-    # Сколько регистров читать, начиная с DATA_OFFSET
-    # Пример: 16-bit word
-    # Правило Modbus: значения могут занимать несколько регистров
-    #  (напр. float32 обычно = 2 регистра)
-    READ_DATA_COUNT: int = 12
-    return ModbusDeviceReadSettings(
-        device_id=DEVICE_ID, offset=DATA_OFFSET, read_count=READ_DATA_COUNT
-    )
-
-
 async def poll_device(
     device_being_polled: AsyncModbusTcpClient,
     device_poll_settings: ModbusDeviceReadSettings,
 
     readed_data: ModbusPDU | None = None
 ):
+    readed_poll_result: PollResult = PollResult()
+    raw_readed_data_fc04: RawBlockResult = RawBlockResult()
+    raw_readed_data_fc03: RawBlockResult = RawBlockResult()
+    raw_error_info: ErrorInfo | None = None
+
     is_not_correct_reading_fc04: bool | None = None
-    is_not_correct_reading_fc03: bool | None = None
-    readed_poll_result: PollResult | None = None
-    raw_readed_data: RawBlockResult | None = None
+
+    read_stop_time: float = 0.0
+    read_end_time: float = 0.0
+    duration_ms: float = 0.0
+    full_read_start_time: float = 0.0
+    full_read_end_time: float = 0.0
 
     try:
+
         logger.info("Читаю регистры fc04")
+        full_read_start_time = time.time()               # когда начали (epoch)
+        # старт измерения длительности (монотонно)
+        read_start_time: float = time.perf_counter()
+
         readed_data = await read_fc04_input_register(
             device_being_polled,
             offset=device_poll_settings.offset,
             read_count=device_poll_settings.read_count,
             plc_id=device_poll_settings.device_id,
         )
+        if readed_data and readed_data.isError is not True:
+            raw_readed_data_fc04.ok = True
+
+        read_stop_time = time.perf_counter()
+        read_end_time = time.time()             # когда закончили (epoch)
+        duration_ms = (read_stop_time - read_start_time) * 1000
+
         is_not_correct_reading_fc04 = False
+
         if readed_data and (readed_data.isError() is True):
+            raw_readed_data_fc04.ok = False
+            exception_code = readed_data.exception_code
             is_not_correct_reading_fc04 = True
-            logger.warning("Ошибка от PLC. Регистры - fc04")
-            logger.warning("Код ошибки: %s", readed_data.exception_code)
-            readed_data = None
+            err_message = "1. Ошибка от PLC. Регистры - fc04"
+            logger.warning(err_message)
+            logger.warning("Код ошибки: %s", exception_code)
+
+            if raw_error_info is None:
+                raw_error_info = ErrorInfo(
+                    exception_code=exception_code, message=err_message, kind=KindState.DEVICE)
+
+            if raw_readed_data_fc04.error is None:
+                raw_readed_data_fc04.error = raw_error_info
 
     except RuntimeError as err:
+        raw_readed_data_fc04.ok = False
         is_not_correct_reading_fc04 = True
-        logger.warning("Ошибка от PLC. Регистры - fc04")
+        err_message = "2. Ошибка от PLC. Регистры - fc04"
+        logger.warning(err_message)
         logger.warning("RuntimeError: %s", err)
+        if raw_error_info is None:
+            raw_error_info = ErrorInfo(
+                exception_code=None, message=err_message, kind=KindState.TRANSPORT)
+
+    finally:
+        if readed_data:
+            raw_readed_data_fc04.ok = True
+            raw_readed_data_fc04.fc = 4
+            raw_readed_data_fc04.unit_id = device_poll_settings.device_id
+            raw_readed_data_fc04.addr = device_poll_settings.offset
+            raw_readed_data_fc04.count = device_poll_settings.read_count
+            raw_readed_data_fc04.registers = readed_data.registers[:]
+            raw_readed_data_fc04.duration_ms = duration_ms
+            raw_readed_data_fc04.ts_block_end = read_end_time
+            if raw_readed_data_fc04 and raw_error_info:
+                raw_readed_data_fc04.error = ErrorInfo(
+                    message=raw_error_info.message, kind=raw_error_info.kind, exception_code=raw_error_info.exception_code, exc_type=raw_error_info.exc_type)
+        if raw_error_info:
+            readed_data = None
 
     if is_not_correct_reading_fc04:
         try:
             logger.info("Читаю регистры fc03")
+            # старт измерения длительности (монотонно)
+            read_start_time = time.perf_counter()
+
             readed_data = await read_fc03_holding_register(
                 device_being_polled,
                 offset=device_poll_settings.offset,
                 read_count=device_poll_settings.read_count,
                 plc_id=device_poll_settings.device_id,
             )
-            is_not_correct_reading_fc03 = False
+            if readed_data and readed_data.isError is not True:
+                raw_readed_data_fc03.ok = True
+            read_stop_time = time.perf_counter()
+            read_end_time = time.time()             # когда закончили (epoch)
+            duration_ms = (read_stop_time - read_start_time) * 1000
+
             if readed_data and (readed_data.isError() is True):
-                is_not_correct_reading_fc03 = True
-                logger.info("Ошибка от PLC. Регистры - fc03")
-                logger.info("Код ошибки: %s", readed_data.exception_code)
+                raw_readed_data_fc03.ok = False
+                exception_code = readed_data.exception_code
+                err_message = "1. Ошибка от PLC. Регистры - fc03"
+                logger.warning(err_message)
+                logger.warning("Код ошибки: %s", exception_code)
+
+                if raw_error_info is None:
+                    raw_error_info = ErrorInfo(
+                        exception_code=exception_code, message=err_message, kind=KindState.DEVICE)
+
+                if raw_readed_data_fc04.error is None:
+                    raw_readed_data_fc04.error = raw_error_info
+
         except RuntimeError as err:
-            is_not_correct_reading_fc03 = True
-            logger.error("Ошибка от PLC. Регистры FC03: %s", err)
+            raw_readed_data_fc03.ok = False
+            # is_not_correct_reading_fc03 = True
+            err_message = "2. Ошибка от PLC. Регистры - fc03"
+            logger.warning(err_message)
+            logger.warning("RuntimeError: %s", err)
+            if raw_error_info is None:
+                raw_error_info = ErrorInfo(
+                    exception_code=None, message=err_message, kind=KindState.TRANSPORT)
+        finally:
+            if readed_data:
+                raw_readed_data_fc03.ok = True
+                raw_readed_data_fc03.fc = 3
+                raw_readed_data_fc03.unit_id = device_poll_settings.device_id
+                raw_readed_data_fc03.addr = device_poll_settings.offset
+                raw_readed_data_fc03.count = device_poll_settings.read_count
+                # TODO Проверить, скопировалось ли или нет....
+                raw_readed_data_fc03.registers = readed_data.registers[:]
+                raw_readed_data_fc03.duration_ms = duration_ms
+                raw_readed_data_fc03.ts_block_end = read_end_time
+                if raw_readed_data_fc03 and raw_error_info:
+                    raw_readed_data_fc03.error = ErrorInfo(
+                        message=raw_error_info.message, kind=raw_error_info.kind, exception_code=raw_error_info.exception_code, exc_type=raw_error_info.exc_type)
+
+    read_stop_time = time.perf_counter()
+    full_read_end_time = time.time()
+    readed_poll_result.blocks.append(raw_readed_data_fc04)
+    readed_poll_result.blocks.append(raw_readed_data_fc03)
+    readed_poll_result.ts_poll_start = full_read_start_time
+    readed_poll_result.ts_poll_end = full_read_end_time
+    return readed_poll_result
 
 
 async def main(
@@ -117,9 +189,20 @@ async def main(
             device_config.host,
             device_config.port,
         )
-        device_being_polled = await open_connection_modbus_tcp(
-            device_config.host, device_config.port
-        )
+        while (True):
+            try:
+                device_being_polled = await open_connection_modbus_tcp(
+                    device_config.host, device_config.port
+                )
+                break
+            except ConnectionError as err:
+                logger.error("Клиент не подключен: %s", err)
+                logger.warning(
+                    "Попытка повторного подключения через 30 секунд")
+                await asyncio.sleep(30)
+                logger.warning("Повторное подключение...")
+                continue
+
         logger.info(
             "Коннект по ip %s порт %s поднят успешно!",
             device_config.host,
@@ -127,6 +210,9 @@ async def main(
         )
         while True:
             await poll_device(device_being_polled, device_poll_settings)
+
+            #  TODO реализовать задержку, что бы она
+            # не плавала. Высчитывать, сколько будет между ними
 
             await asyncio.sleep(device_config.poll_interval_s)
     finally:
