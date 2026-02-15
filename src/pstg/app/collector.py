@@ -2,11 +2,14 @@ import asyncio
 import logging
 
 from pymodbus.client import AsyncModbusTcpClient
+from pymodbus.exceptions import ConnectionException
 from pymodbus.pdu import ModbusPDU
 
 from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.modbus_config import ModbusConfig
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
+from pstg.domain.poll_result import PollResult
+from pstg.domain.raw_block_result import RawBlockResult
 from pstg.drivers.read_fc03_holding_register import read_fc03_holding_register
 from pstg.drivers.read_fc04_input_regoster import read_fc04_input_register
 
@@ -55,10 +58,13 @@ def get_device_read_settings() -> ModbusDeviceReadSettings:
 async def poll_device(
     device_being_polled: AsyncModbusTcpClient,
     device_poll_settings: ModbusDeviceReadSettings,
-    is_not_correct_reading_fc04: bool | None = None,
-    is_not_correct_reading_fc03: bool | None = None
-) -> None:
+
     readed_data: ModbusPDU | None = None
+):
+    is_not_correct_reading_fc04: bool | None = None
+    is_not_correct_reading_fc03: bool | None = None
+    readed_poll_result: PollResult | None = None
+    raw_readed_data: RawBlockResult | None = None
 
     try:
         logger.info("Читаю регистры fc04")
