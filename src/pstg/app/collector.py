@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from typing import AsyncIterator
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.pdu import ModbusPDU
@@ -11,6 +12,7 @@ from pstg.app.read_config import get_device_read_settings
 
 from pstg.domain.error_info import ErrorInfo
 from pstg.domain.kind_state import KindState
+from pstg.domain.connection_state import ConnectionState
 from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.modbus_config import ModbusConfig
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
@@ -37,8 +39,12 @@ async def poll_device(
     readed_data: ModbusPDU | None = None
 ):
     readed_poll_result: PollResult = PollResult()
+
+    readed_poll_result.connection_state = ConnectionState.DOWN
+
     raw_readed_data_fc04: RawBlockResult = RawBlockResult()
     raw_readed_data_fc03: RawBlockResult = RawBlockResult()
+
     raw_error_info: ErrorInfo | None = None
 
     is_not_correct_reading_fc04: bool | None = None
@@ -174,12 +180,19 @@ async def poll_device(
     readed_poll_result.blocks.append(raw_readed_data_fc03)
     readed_poll_result.ts_poll_start = full_read_start_time
     readed_poll_result.ts_poll_end = full_read_end_time
+    if raw_readed_data_fc03.ok or raw_readed_data_fc04.ok:
+        readed_poll_result.connection_state = ConnectionState.UP
+
     return readed_poll_result
 
 
-async def main(
+async def poll_forever(
     device_config: ModbusConfig, device_poll_settings: ModbusDeviceReadSettings
-) -> None:
+) -> AsyncIterator[PollResult]:
+
+    poll_result: PollResult = PollResult()
+    time_start: float = 0
+    time_end: float = 0
 
     device_being_polled: AsyncModbusTcpClient | None = None
     try:
@@ -191,11 +204,19 @@ async def main(
         )
         while (True):
             try:
+                time_start = time.time()
                 device_being_polled = await open_connection_modbus_tcp(
                     device_config.host, device_config.port
                 )
                 break
             except ConnectionError as err:
+                time_end = time.time()
+
+                poll_result.connection_state = ConnectionState.DOWN
+                poll_result.ts_poll_start = time_start
+                poll_result.ts_poll_end = time_end
+                yield poll_result
+
                 logger.error("Клиент не подключен: %s", err)
                 logger.warning(
                     "Попытка повторного подключения через 30 секунд")
@@ -209,7 +230,8 @@ async def main(
             device_config.port,
         )
         while True:
-            await poll_device(device_being_polled, device_poll_settings)
+            poll_result = await poll_device(device_being_polled, device_poll_settings)
+            yield poll_result
 
             #  TODO реализовать задержку, что бы она
             # не плавала. Высчитывать, сколько будет между ними
@@ -226,6 +248,12 @@ async def main(
         logger.info("Коннект закрыт")
 
 
+async def main():
+    async for result in poll_forever(get_modbus_config(), get_device_read_settings()):
+        logger.info("%s", result)
+    return
+
+
 if __name__ == "__main__":
     # device_config: ModbusConfig = await get_modbus_config()
     # ✅ Настройка логов только при запуске как скрипт
@@ -234,7 +262,7 @@ if __name__ == "__main__":
 
         logger.info("Запуск Pump Station Telemetry Gateway")
         asyncio.run(
-            main(get_modbus_config(), get_device_read_settings()), debug=False
+            main(), debug=False
         )
 
     except KeyboardInterrupt:
