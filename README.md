@@ -1,6 +1,6 @@
 # Pump Station Telemetry Gateway(Industrial и Water & Wastewater)
 
-Ветки разработки:
+Ветки разработки:<br />
 https://github.com/EPoY74/pstg/tree/wip/pstg-probe - считываю данные с PLC. Тестирование считывания.
 https://github.com/EPoY74/pstg/tree/wip/modbus-async-core - разработка Modbus Poller.
 
