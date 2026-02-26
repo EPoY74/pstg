@@ -111,7 +111,6 @@ async def poll_device(
 
     finally:
         if readed_data:
-            raw_readed_data_fc04.ok = True
             raw_readed_data_fc04.fc = 4
             raw_readed_data_fc04.unit_id = device_poll_settings.device_id
             raw_readed_data_fc04.addr = device_poll_settings.offset
@@ -161,8 +160,8 @@ async def poll_device(
                         kind=KindState.DEVICE,
                     )
 
-                if raw_readed_data_fc04.error is None:
-                    raw_readed_data_fc04.error = raw_error_info
+                if raw_readed_data_fc03.error is None:
+                    raw_readed_data_fc03.error = raw_error_info
 
         except RuntimeError as err:
             raw_readed_data_fc03.ok = False
@@ -178,7 +177,6 @@ async def poll_device(
                 )
         finally:
             if readed_data:
-                raw_readed_data_fc03.ok = True
                 raw_readed_data_fc03.fc = 3
                 raw_readed_data_fc03.unit_id = device_poll_settings.device_id
                 raw_readed_data_fc03.addr = device_poll_settings.offset
@@ -201,7 +199,12 @@ async def poll_device(
     readed_poll_result.blocks.append(raw_readed_data_fc03)
     readed_poll_result.ts_poll_start = full_read_start_time
     readed_poll_result.ts_poll_end = full_read_end_time
-    if raw_readed_data_fc03.ok or raw_readed_data_fc04.ok:
+    if (
+        raw_readed_data_fc03.ok
+        or raw_readed_data_fc03.error
+        or raw_readed_data_fc04.error
+        or raw_readed_data_fc04.ok
+    ):
         readed_poll_result.connection_state = ConnectionState.UP
 
     return readed_poll_result
