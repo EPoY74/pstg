@@ -71,7 +71,7 @@ async def poll_device(
             read_count=device_poll_settings.read_count,
             plc_id=device_poll_settings.device_id,
         )
-        if readed_data and readed_data.isError is not True:
+        if readed_data and readed_data.isError() is not True:
             raw_readed_data_fc04.ok = True
 
         read_stop_time = time.perf_counter()
@@ -143,7 +143,7 @@ async def poll_device(
                 read_count=device_poll_settings.read_count,
                 plc_id=device_poll_settings.device_id,
             )
-            if readed_data and readed_data.isError is not True:
+            if readed_data and readed_data.isError() is not True:
                 raw_readed_data_fc03.ok = True
             read_stop_time = time.perf_counter()
             read_end_time = time.time()  # когда закончили (epoch)
