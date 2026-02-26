@@ -1,16 +1,15 @@
-import asyncio
-import logging
-import time
-from typing import AsyncIterator
-
 # запуск:  uv run python -m pstg.app.collector
 # перед запуском может понадобиться выполнение команд:
 # uv sync
 # uv pip install -e .   - Использовать в проде запрещено!!!!
 
+import asyncio
+import logging
+import time
+from typing import AsyncIterator
+
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.pdu import ModbusPDU
-
 
 from pstg.app.modbus_corfig import get_modbus_config
 from pstg.app.read_config import get_device_read_settings
