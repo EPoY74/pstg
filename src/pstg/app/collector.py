@@ -13,15 +13,14 @@ from pymodbus.pdu import ModbusPDU
 
 from pstg.app.modbus_corfig import get_modbus_config
 from pstg.app.read_config import get_device_read_settings
-
+from pstg.domain.connection_state import ConnectionState
 from pstg.domain.error_info import ErrorInfo
 from pstg.domain.kind_state import KindState
-from pstg.domain.connection_state import ConnectionState
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.modbus_config import ModbusConfig
-from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
+from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.poll_result import PollResult
 from pstg.domain.raw_block_result import RawBlockResult
+from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
 from pstg.drivers.read_fc03_holding_register import read_fc03_holding_register
 from pstg.drivers.read_fc04_input_regoster import read_fc04_input_register
 
