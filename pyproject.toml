@@ -8,3 +8,20 @@ dependencies = [
     "pymodbus>=3.12.0",
     "pytest>=9.0.2",
 ]
+
+[tool.ruff]
+line-length = 101
+
+[tool.ruff.format]
+quote-style = "double"
+
+#рекомендуется по pep8
+indent-style = "space" 
+
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "I", "A", "C", "T"]
+
+# ignore = []
+
