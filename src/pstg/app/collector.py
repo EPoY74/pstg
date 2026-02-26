@@ -199,13 +199,13 @@ async def poll_device(
     readed_poll_result.blocks.append(raw_readed_data_fc03)
     readed_poll_result.ts_poll_start = full_read_start_time
     readed_poll_result.ts_poll_end = full_read_end_time
-    if (
-        raw_readed_data_fc03.ok
-        or raw_readed_data_fc03.error
-        or raw_readed_data_fc04.error
-        or raw_readed_data_fc04.ok
-    ):
-        readed_poll_result.connection_state = ConnectionState.UP
+    # if (
+    #     raw_readed_data_fc03.ok
+    #     or raw_readed_data_fc03.error
+    #     or raw_readed_data_fc04.error
+    #     or raw_readed_data_fc04.ok
+    # ):
+    readed_poll_result.connection_state = ConnectionState.UP
 
     return readed_poll_result
 
