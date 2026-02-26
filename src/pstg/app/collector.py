@@ -3,6 +3,11 @@ import logging
 import time
 from typing import AsyncIterator
 
+# запуск:  uv run python -m pstg.app.collector
+# перед запуском может понадобиться выполнение команд:
+# uv sync
+# uv pip install -e .   - Использовать в проде запрещено!!!!
+
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.pdu import ModbusPDU
 
@@ -35,8 +40,7 @@ def init_logging():
 async def poll_device(
     device_being_polled: AsyncModbusTcpClient,
     device_poll_settings: ModbusDeviceReadSettings,
-
-    readed_data: ModbusPDU | None = None
+    readed_data: ModbusPDU | None = None,
 ):
     readed_poll_result: PollResult = PollResult()
 
@@ -56,9 +60,8 @@ async def poll_device(
     full_read_end_time: float = 0.0
 
     try:
-
         logger.info("Читаю регистры fc04")
-        full_read_start_time = time.time()               # когда начали (epoch)
+        full_read_start_time = time.time()  # когда начали (epoch)
         # старт измерения длительности (монотонно)
         read_start_time: float = time.perf_counter()
 
@@ -72,7 +75,7 @@ async def poll_device(
             raw_readed_data_fc04.ok = True
 
         read_stop_time = time.perf_counter()
-        read_end_time = time.time()             # когда закончили (epoch)
+        read_end_time = time.time()  # когда закончили (epoch)
         duration_ms = (read_stop_time - read_start_time) * 1000
 
         is_not_correct_reading_fc04 = False
@@ -87,7 +90,10 @@ async def poll_device(
 
             if raw_error_info is None:
                 raw_error_info = ErrorInfo(
-                    exception_code=exception_code, message=err_message, kind=KindState.DEVICE)
+                    exception_code=exception_code,
+                    message=err_message,
+                    kind=KindState.DEVICE,
+                )
 
             if raw_readed_data_fc04.error is None:
                 raw_readed_data_fc04.error = raw_error_info
@@ -100,7 +106,10 @@ async def poll_device(
         logger.warning("RuntimeError: %s", err)
         if raw_error_info is None:
             raw_error_info = ErrorInfo(
-                exception_code=None, message=err_message, kind=KindState.TRANSPORT)
+                exception_code=None,
+                message=err_message,
+                kind=KindState.TRANSPORT,
+            )
 
     finally:
         if readed_data:
@@ -114,7 +123,11 @@ async def poll_device(
             raw_readed_data_fc04.ts_block_end = read_end_time
             if raw_readed_data_fc04 and raw_error_info:
                 raw_readed_data_fc04.error = ErrorInfo(
-                    message=raw_error_info.message, kind=raw_error_info.kind, exception_code=raw_error_info.exception_code, exc_type=raw_error_info.exc_type)
+                    message=raw_error_info.message,
+                    kind=raw_error_info.kind,
+                    exception_code=raw_error_info.exception_code,
+                    exc_type=raw_error_info.exc_type,
+                )
         if raw_error_info:
             readed_data = None
 
@@ -133,7 +146,7 @@ async def poll_device(
             if readed_data and readed_data.isError is not True:
                 raw_readed_data_fc03.ok = True
             read_stop_time = time.perf_counter()
-            read_end_time = time.time()             # когда закончили (epoch)
+            read_end_time = time.time()  # когда закончили (epoch)
             duration_ms = (read_stop_time - read_start_time) * 1000
 
             if readed_data and (readed_data.isError() is True):
@@ -145,7 +158,10 @@ async def poll_device(
 
                 if raw_error_info is None:
                     raw_error_info = ErrorInfo(
-                        exception_code=exception_code, message=err_message, kind=KindState.DEVICE)
+                        exception_code=exception_code,
+                        message=err_message,
+                        kind=KindState.DEVICE,
+                    )
 
                 if raw_readed_data_fc04.error is None:
                     raw_readed_data_fc04.error = raw_error_info
@@ -158,7 +174,10 @@ async def poll_device(
             logger.warning("RuntimeError: %s", err)
             if raw_error_info is None:
                 raw_error_info = ErrorInfo(
-                    exception_code=None, message=err_message, kind=KindState.TRANSPORT)
+                    exception_code=None,
+                    message=err_message,
+                    kind=KindState.TRANSPORT,
+                )
         finally:
             if readed_data:
                 raw_readed_data_fc03.ok = True
@@ -172,7 +191,11 @@ async def poll_device(
                 raw_readed_data_fc03.ts_block_end = read_end_time
                 if raw_readed_data_fc03 and raw_error_info:
                     raw_readed_data_fc03.error = ErrorInfo(
-                        message=raw_error_info.message, kind=raw_error_info.kind, exception_code=raw_error_info.exception_code, exc_type=raw_error_info.exc_type)
+                        message=raw_error_info.message,
+                        kind=raw_error_info.kind,
+                        exception_code=raw_error_info.exception_code,
+                        exc_type=raw_error_info.exc_type,
+                    )
 
     read_stop_time = time.perf_counter()
     full_read_end_time = time.time()
@@ -202,7 +225,7 @@ async def poll_forever(
             device_config.host,
             device_config.port,
         )
-        while (True):
+        while True:
             try:
                 time_start = time.time()
                 device_being_polled = await open_connection_modbus_tcp(
@@ -218,8 +241,7 @@ async def poll_forever(
                 yield poll_result
 
                 logger.error("Клиент не подключен: %s", err)
-                logger.warning(
-                    "Попытка повторного подключения через 30 секунд")
+                logger.warning("Попытка повторного подключения через 30 секунд")
                 await asyncio.sleep(30)
                 logger.warning("Повторное подключение...")
                 continue
@@ -230,7 +252,9 @@ async def poll_forever(
             device_config.port,
         )
         while True:
-            poll_result = await poll_device(device_being_polled, device_poll_settings)
+            poll_result = await poll_device(
+                device_being_polled, device_poll_settings
+            )
             yield poll_result
 
             #  TODO реализовать задержку, что бы она
@@ -249,7 +273,9 @@ async def poll_forever(
 
 
 async def main():
-    async for result in poll_forever(get_modbus_config(), get_device_read_settings()):
+    async for result in poll_forever(
+        get_modbus_config(), get_device_read_settings()
+    ):
         logger.info("%s", result)
     return
 
@@ -261,9 +287,7 @@ if __name__ == "__main__":
         init_logging()
 
         logger.info("Запуск Pump Station Telemetry Gateway")
-        asyncio.run(
-            main(), debug=False
-        )
+        asyncio.run(main(), debug=False)
 
     except KeyboardInterrupt:
         logger.info("Пользователь нажал Ctrl+C")
