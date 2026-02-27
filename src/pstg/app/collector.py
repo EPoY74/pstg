@@ -115,7 +115,8 @@ async def poll_device(
             raw_readed_data_fc04.unit_id = device_poll_settings.device_id
             raw_readed_data_fc04.addr = device_poll_settings.offset
             raw_readed_data_fc04.count = device_poll_settings.read_count
-            raw_readed_data_fc04.registers = readed_data.registers[:]
+            if hasattr(raw_readed_data_fc04, "registers"):
+                raw_readed_data_fc04.registers = readed_data.registers[:]
             raw_readed_data_fc04.duration_ms = duration_ms
             raw_readed_data_fc04.ts_block_end = read_end_time
             if raw_readed_data_fc04 and raw_error_info:
@@ -182,7 +183,8 @@ async def poll_device(
                 raw_readed_data_fc03.addr = device_poll_settings.offset
                 raw_readed_data_fc03.count = device_poll_settings.read_count
                 # TODO Проверить, скопировалось ли или нет....
-                raw_readed_data_fc03.registers = readed_data.registers[:]
+                if hasattr(raw_readed_data_fc03, "registers"):
+                    raw_readed_data_fc03.registers = readed_data.registers[:]
                 raw_readed_data_fc03.duration_ms = duration_ms
                 raw_readed_data_fc03.ts_block_end = read_end_time
                 if raw_readed_data_fc03 and raw_error_info:
@@ -219,58 +221,64 @@ async def poll_forever(
     time_end: float = 0
 
     device_being_polled: AsyncModbusTcpClient | None = None
-    try:
-        logger.info("Запуск цикла опроса.")
-        logger.info(
-            "Поднимаю коннект по ip %s порт %s",
-            device_config.host,
-            device_config.port,
-        )
-        while True:
-            try:
-                time_start = time.time()
-                device_being_polled = await open_connection_modbus_tcp(
-                    device_config.host, device_config.port
-                )
-                break
-            except ConnectionError as err:
-                time_end = time.time()
-
-                poll_result.connection_state = ConnectionState.DOWN
-                poll_result.ts_poll_start = time_start
-                poll_result.ts_poll_end = time_end
-                yield poll_result
-
-                logger.error("Клиент не подключен: %s", err)
-                logger.warning("Попытка повторного подключения через 30 секунд")
-                await asyncio.sleep(30)
-                logger.warning("Повторное подключение...")
-                continue
-
-        logger.info(
-            "Коннект по ip %s порт %s поднят успешно!",
-            device_config.host,
-            device_config.port,
-        )
-        while True:
-            poll_result = await poll_device(
-                device_being_polled, device_poll_settings
+    while True:
+        try:
+            logger.info("Запуск цикла опроса.")
+            logger.info(
+                "Поднимаю коннект по ip %s порт %s",
+                device_config.host,
+                device_config.port,
             )
-            yield poll_result
+            while True:
+                try:
+                    time_start = time.time()
+                    device_being_polled = await open_connection_modbus_tcp(
+                        device_config.host, device_config.port
+                    )
+                    break
+                except ConnectionError as err:
+                    time_end = time.time()
 
-            #  TODO реализовать задержку, что бы она
-            # не плавала. Высчитывать, сколько будет между ними
+                    poll_result.connection_state = ConnectionState.DOWN
+                    poll_result.ts_poll_start = time_start
+                    poll_result.ts_poll_end = time_end
+                    yield poll_result
 
-            await asyncio.sleep(device_config.poll_interval_s)
-    finally:
-        logger.info(
-            "Закрываю Коннект по ip %s порт %s!",
-            device_config.host,
-            device_config.port,
-        )
-        if device_being_polled:
-            device_being_polled.close()
-        logger.info("Коннект закрыт")
+                    logger.error("Клиент не подключен: %s", err)
+                    logger.warning(
+                        "Попытка повторного подключения через 30 секунд"
+                    )
+                    await asyncio.sleep(30)
+                    logger.warning("Повторное подключение...")
+                    continue
+
+            logger.info(
+                "Коннект по ip %s порт %s поднят успешно!",
+                device_config.host,
+                device_config.port,
+            )
+            while True:
+                try:
+                    poll_result = await poll_device(
+                        device_being_polled, device_poll_settings
+                    )
+                    yield poll_result
+
+                    #  TODO реализовать задержку, что бы она
+                    # не плавала. Высчитывать, сколько будет между ними
+
+                    await asyncio.sleep(device_config.poll_interval_s)
+                except Exception as err:
+
+        finally:
+            logger.info(
+                "Закрываю Коннект по ip %s порт %s!",
+                device_config.host,
+                device_config.port,
+            )
+            if device_being_polled:
+                device_being_polled.close()
+            logger.info("Коннект закрыт")
 
 
 async def main():
