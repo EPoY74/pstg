@@ -93,8 +93,8 @@ async def poll_device(
                     kind=KindState.DEVICE,
                 )
 
-            if raw_readed_data_fc04.error is None:
-                raw_readed_data_fc04.error = raw_error_info
+            if raw_readed_data_fc04.current_error_info is None:
+                raw_readed_data_fc04.current_error_info = raw_error_info
 
     except RuntimeError as err:
         raw_readed_data_fc04.ok = False
@@ -115,12 +115,12 @@ async def poll_device(
             raw_readed_data_fc04.unit_id = device_poll_settings.device_id
             raw_readed_data_fc04.addr = device_poll_settings.offset
             raw_readed_data_fc04.count = device_poll_settings.read_count
-            if hasattr(raw_readed_data_fc04, "registers"):
+            if hasattr(readed_data, "registers"):
                 raw_readed_data_fc04.registers = readed_data.registers[:]
             raw_readed_data_fc04.duration_ms = duration_ms
             raw_readed_data_fc04.ts_block_end = read_end_time
             if raw_readed_data_fc04 and raw_error_info:
-                raw_readed_data_fc04.error = ErrorInfo(
+                raw_readed_data_fc04.current_error_info = ErrorInfo(
                     message=raw_error_info.message,
                     kind=raw_error_info.kind,
                     exception_code=raw_error_info.exception_code,
@@ -161,8 +161,8 @@ async def poll_device(
                         kind=KindState.DEVICE,
                     )
 
-                if raw_readed_data_fc03.error is None:
-                    raw_readed_data_fc03.error = raw_error_info
+                if raw_readed_data_fc03.current_error_info is None:
+                    raw_readed_data_fc03.current_error_info = raw_error_info
 
         except RuntimeError as err:
             raw_readed_data_fc03.ok = False
@@ -183,12 +183,12 @@ async def poll_device(
                 raw_readed_data_fc03.addr = device_poll_settings.offset
                 raw_readed_data_fc03.count = device_poll_settings.read_count
                 # TODO Проверить, скопировалось ли или нет....
-                if hasattr(raw_readed_data_fc03, "registers"):
+                if hasattr(readed_data, "registers"):
                     raw_readed_data_fc03.registers = readed_data.registers[:]
                 raw_readed_data_fc03.duration_ms = duration_ms
                 raw_readed_data_fc03.ts_block_end = read_end_time
                 if raw_readed_data_fc03 and raw_error_info:
-                    raw_readed_data_fc03.error = ErrorInfo(
+                    raw_readed_data_fc03.current_error_info = ErrorInfo(
                         message=raw_error_info.message,
                         kind=raw_error_info.kind,
                         exception_code=raw_error_info.exception_code,
@@ -201,13 +201,20 @@ async def poll_device(
     readed_poll_result.blocks.append(raw_readed_data_fc03)
     readed_poll_result.ts_poll_start = full_read_start_time
     readed_poll_result.ts_poll_end = full_read_end_time
-    # if (
-    #     raw_readed_data_fc03.ok
-    #     or raw_readed_data_fc03.error
-    #     or raw_readed_data_fc04.error
-    #     or raw_readed_data_fc04.ok
-    # ):
-    readed_poll_result.connection_state = ConnectionState.UP
+    if (
+        raw_readed_data_fc03.ok
+        or (hasattr(raw_readed_data_fc03, "current_error_info") 
+            and (raw_readed_data_fc03.current_error_info 
+                 and (raw_readed_data_fc03.current_error_info.kind)
+                 and (raw_readed_data_fc03.current_error_info.kind == KindState.DEVICE))  # noqa: E501
+        or (hasattr(raw_readed_data_fc04, "current_error_info") 
+            and (raw_readed_data_fc04.current_error_info 
+                 and (raw_readed_data_fc04.current_error_info.kind)
+                 and (raw_readed_data_fc04.current_error_info.kind == KindState.DEVICE))  # noqa: E501
+        or raw_readed_data_fc04.ok)
+    ):
+
+        readed_poll_result.connection_state = ConnectionState.UP
 
     return readed_poll_result
 
@@ -269,6 +276,7 @@ async def poll_forever(
 
                     await asyncio.sleep(device_config.poll_interval_s)
                 except Exception as err:
+                    logger.error("Ошибка: %s", err)
 
         finally:
             logger.info(
