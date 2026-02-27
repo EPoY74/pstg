@@ -47,7 +47,7 @@ class RawBlockResult:
     # - kind="transport" (ошибка транспорта): таймаут, разрыв TCP, и т.п.
     # - kind="device" (ошибка устройства): Modbus exception (Illegal Function / Illegal Data Address и т.д.).
     # Если ok=True -> error обычно None.
-    error: ErrorInfo | None = None
+    current_error_info: ErrorInfo | None = None
 
     # duration_ms (Длительность, миллисекунды):
     # Сколько заняло это чтение "от отправки запроса до получения ответа" (latency).
