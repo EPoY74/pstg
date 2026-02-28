@@ -44,10 +44,20 @@ def _parse_register_blocks(raw_blocks: list[dict] | None) -> list[RegisterBlockC
 def default_simulator_config() -> SimulatorConfig:
     return SimulatorConfig(
         input_registers=[
-            RegisterBlockConfig(address=0, values=[101, 102, 103, 104]),
+            RegisterBlockConfig(
+                address=0,
+                values=[101, 102, 103, 104],
+                interval_s=1.0,
+                step=1,
+            ),
         ],
         holding_registers=[
-            RegisterBlockConfig(address=0, values=[201, 202, 203, 204]),
+            RegisterBlockConfig(
+                address=0,
+                values=[201, 202, 203, 204],
+                interval_s=2.0,
+                step=10,
+            ),
         ],
     )
 

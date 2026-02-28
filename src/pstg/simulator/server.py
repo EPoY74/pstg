@@ -75,6 +75,7 @@ class DevModbusServer:
         )
         self._task = asyncio.create_task(self.server.serve_forever())
         self._start_auto_updates()
+        logger.info("Auto-update tasks started: %s", len(self._update_tasks))
 
     async def stop(self) -> None:
         logger.info("Stopping Modbus simulator")
@@ -102,6 +103,13 @@ class DevModbusServer:
             if block.interval_s is None:
                 continue
 
+            logger.info(
+                "Auto-update enabled for fc%s address=%s interval_s=%s step=%s",
+                function_code,
+                block.address,
+                block.interval_s,
+                block.step,
+            )
             task = asyncio.create_task(
                 self._auto_update_block(function_code, block),
             )
