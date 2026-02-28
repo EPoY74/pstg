@@ -1,9 +1,10 @@
 # tests/conftest.py
 import asyncio
 import socket
-import pytest
 
+import pytest
 from pymodbus.server import ModbusTcpServer
+
 from tests.helpers.mock_modbus_server import build_context
 
 
