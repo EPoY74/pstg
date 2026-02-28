@@ -25,4 +25,3 @@ docstring-code-format = true
 select = ["E", "F", "UP", "B", "SIM", "I", "A", "C", "T"]
 
 # ignore = []
-
