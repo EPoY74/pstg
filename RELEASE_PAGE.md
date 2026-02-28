@@ -2,7 +2,7 @@
 
 `PSTG` (`Pump Station Telemetry Gateway`) is a practical `MVP` for `Modbus TCP polling`, local telemetry development and communication diagnostics without mandatory access to real `PLC`, `RTU` or `Modbus gateway` hardware.
 
-The project was developed by a specialist from **ООО "ЧЗМЭК" (ООО «Челябинский завод мобильных энергоустановок и конструкций»)** for personal use as a working tool to simplify station monitoring development, debugging and day-to-day engineering work.
+The project was developed by a specialist from **ООО "ЧЗМЭК"** (`ООО "Челябинский завод мобильных энергоустановок и конструкций"`) for personal use as a working tool to simplify station monitoring development, debugging and day-to-day engineering work.
 
 ## Highlights
 
@@ -87,3 +87,11 @@ Relevant areas:
 - `PLC integration`
 - `RTU integration`
 - `diagnostics`
+
+
+## Documentation set
+
+- `README.md` ? main project documentation and quick start
+- `RELEASE_NOTES.md` ? detailed release summary
+- `CHANGELOG.md` ? versioned change history
+- `RELEASE_PAGE.md` ? publishable release description

@@ -29,3 +29,10 @@
 - this release is an `MVP`
 - the project was developed as a practical engineering tool for station monitoring and Modbus telemetry work
 - current implementation is suitable for development, diagnostics and further iteration without permanent dependency on physical hardware
+
+
+## Release documents
+
+- `README.md` contains the main technical documentation, quick start, FAQ and simulator guide
+- `RELEASE_NOTES.md` contains the detailed release summary
+- `RELEASE_PAGE.md` contains the ready-to-publish release page text
