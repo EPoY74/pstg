@@ -1,0 +1,7 @@
+PSTG (Pump Station Telemetry Gateway)
+
+Copyright 2026
+
+This project was originally developed by a specialist from the service department of OOO "CHZMEK" (Chelyabinsk Plant of Mobile Power Units and Structures) for personal engineering use related to station monitoring, Modbus TCP polling, telemetry diagnostics and development without permanent access to physical hardware.
+
+If you redistribute this project or derivative works, keep this NOTICE file together with the LICENSE file and preserve attribution to the PSTG project and its origin.

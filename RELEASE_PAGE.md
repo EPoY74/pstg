@@ -1,81 +1,96 @@
 # PSTG MVP
 
-`PSTG` (`Pump Station Telemetry Gateway`) is a practical `MVP` for `Modbus TCP polling`, local telemetry development and communication diagnostics without mandatory access to real `PLC`, `RTU` or `Modbus gateway` hardware.
+Русская версия. English version: [RELEASE_PAGE.en.md](RELEASE_PAGE.en.md)
 
-The project was developed by a specialist from **ООО "ЧЗМЭК"** (`ООО "Челябинский завод мобильных энергоустановок и конструкций"`) for personal use as a working tool to simplify station monitoring development, debugging and day-to-day engineering work.
+Связанные документы:
+- [README.md](README.md)
+- [RELEASE_NOTES.md](RELEASE_NOTES.md)
+- [CHANGELOG.md](CHANGELOG.md)
+- [LICENSE](LICENSE)
+- [NOTICE](NOTICE)
 
-## Highlights
+`PSTG` (`Pump Station Telemetry Gateway`) — это практический `MVP` для `Modbus TCP polling`, локальной telemetry-разработки и диагностики связи без обязательного доступа к реальному `PLC`, `RTU` или `Modbus gateway`.
+
+Проект разрабатывался специалистом сервисного отдела **ООО "ЧЗМЭК"** (`ООО "Челябинский завод мобильных энергоустановок и конструкций"`) для личного использования как рабочий инструмент, который упрощает развитие мониторинга станций, отладку, проверку карт регистров и ежедневную инженерную работу.
+
+## Ключевое
 
 - async `Modbus TCP` collector
 - fallback `FC04 -> FC03`
-- explicit separation of `device error` and `transport error`
-- reconnect logic
-- local `Modbus simulator`
-- configurable register map through JSON
-- timed auto-update of simulator registers
-- unit, scenario and integration tests
-- extended documentation with quick start, FAQ and troubleshooting guidance
+- явное разделение `device error` и `transport error`
+- reconnect-логика
+- локальный `Modbus simulator`
+- настраиваемая карта регистров через JSON
+- автообновление регистров по таймеру
+- unit, scenario и integration tests
+- расширенная документация с quick start, FAQ и troubleshooting
 
-## Why this release matters
+## Почему этот релиз важен
 
-This release makes it possible to:
+Этот релиз позволяет:
 
-- develop and debug Modbus telemetry logic without physical hardware
-- validate `register map` and `address map`
-- test fallback behavior and reconnect scenarios
-- observe changing values over time for future time-series and monitoring work
-- move faster when building station monitoring tooling
+- разрабатывать и отлаживать `Modbus TCP` telemetry-логику без физического оборудования
+- валидировать `register map` и `address map`
+- проверять fallback и reconnect-сценарии
+- наблюдать изменяющиеся значения для будущих time-series и monitoring задач
+- быстрее развивать tooling для мониторинга станций
 
-## Included changes
+## Что вошло
 
-- added asynchronous collector for `Modbus TCP`
-- added structured result models: `PollResult`, `RawBlockResult`, `ErrorInfo`
-- added fallback from `FC04` to `FC03`
-- added reconnect logic at application level
-- added local development simulator
-- added simulator config file format and example
-- added timed register auto-update mode
-- added tests from unit level to integration level
-- expanded project documentation
+- асинхронный collector для `Modbus TCP`
+- структурированные модели результатов: `PollResult`, `RawBlockResult`, `ErrorInfo`
+- fallback с `FC04` на `FC03`
+- reconnect на уровне приложения
+- локальный development simulator
+- формат simulator config и пример JSON
+- режим автоизменения регистров
+- тесты от unit уровня до integration уровня
+- расширенная документация
 
-## Current scope
+## Текущие рамки
 
-This is still an `MVP`, not a production-ready final system.
+Это все еще `MVP`, а не финальная production-ready система.
 
-Already included:
+Уже есть:
 
 - polling
 - fallback
 - reconnect
 - simulator
-- tests
-- documentation
+- тесты
+- документация
 
-Planned next:
+Дальше планируются:
 
-- external collector configuration
-- decode layer
-- database or time-series storage
+- внешний конфиг collector
+- decode-слой
+- database или time-series storage
 - REST API
-- richer simulator scenarios
+- более богатые simulator-сценарии
 
-## Quick start
+## Быстрый старт
 
-Run simulator:
+Запуск simulator:
 
 ```powershell
 uv run python -m pstg.simulator.server
 ```
 
-Run collector:
+Запуск collector:
 
 ```powershell
 uv run python -m pstg.app.collector
 ```
 
-## Project focus
+## Лицензия
 
-Relevant areas:
+Проект распространяется под `Apache License 2.0`.
+
+При использовании и распространении нужно сохранять [LICENSE](LICENSE) и [NOTICE](NOTICE), включая упоминание проекта `PSTG` и происхождения разработки.
+
+## Фокус проекта
+
+Проект особенно релевантен для:
 
 - `SCADA`
 - `industrial automation`
@@ -87,11 +102,3 @@ Relevant areas:
 - `PLC integration`
 - `RTU integration`
 - `diagnostics`
-
-
-## Documentation set
-
-- `README.md` ? main project documentation and quick start
-- `RELEASE_NOTES.md` ? detailed release summary
-- `CHANGELOG.md` ? versioned change history
-- `RELEASE_PAGE.md` ? publishable release description
