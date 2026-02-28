@@ -1,8 +1,8 @@
 """
-20260216: Самая первая версия опросчика для датчиков давления PT1 и  PT2. 
+20260216: Самая первая версия опросчика для датчиков давления PT1 и  PT2.
 Тестовая.
 Считывает  через FC04 и FC03 2 word с устройства id = 1 с адресов 56 и 58
-IP  адрес и порт - хардкод 
+IP  адрес и порт - хардкод
 """
 
 import asyncio
@@ -52,8 +52,13 @@ async def main() -> None:
             "Got PT1 input registers (FC04) float32: %s",
             value_int16_input,
         )
-        logger.info(pstg_client.convert_from_registers(
-            input_regs.registers[0:2], pstg_client.DATATYPE.FLOAT32, word_order="little"))
+        logger.info(
+            pstg_client.convert_from_registers(
+                input_regs.registers[0:2],
+                pstg_client.DATATYPE.FLOAT32,
+                word_order="little",
+            )
+        )
 
     try:
         logger.info("Reading PT2 from holding registers (FC03)")
@@ -83,8 +88,13 @@ async def main() -> None:
             value_int16_holding,
             # bits_hold,
         )
-        logger.info(pstg_client.convert_from_registers(
-            holding_regs.registers[0:2], pstg_client.DATATYPE.FLOAT32, word_order="little"))
+        logger.info(
+            pstg_client.convert_from_registers(
+                holding_regs.registers[0:2],
+                pstg_client.DATATYPE.FLOAT32,
+                word_order="little",
+            )
+        )
 
     logger.info("Close connection")
     pstg_client.close()
