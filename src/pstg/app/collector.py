@@ -6,7 +6,7 @@
 import asyncio
 import logging
 import time
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.pdu import ModbusPDU
@@ -21,6 +21,7 @@ from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.poll_result import PollResult
 from pstg.domain.raw_block_result import RawBlockResult
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
+from pstg.drivers.read_block import read_block
 from pstg.drivers.read_fc03_holding_register import read_fc03_holding_register
 from pstg.drivers.read_fc04_input_regoster import read_fc04_input_register
 
@@ -33,6 +34,10 @@ def init_logging():
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+
+
+def _is_transport_correct(is_correct: bool) -> bool:
+    return is_correct
 
 
 async def poll_device(
@@ -50,7 +55,7 @@ async def poll_device(
 
     raw_error_info: ErrorInfo | None = None
 
-    is_not_correct_reading_fc04: bool | None = None
+    is_transport_correct_04: bool | None = None
 
     read_stop_time: float = 0.0
     read_end_time: float = 0.0
@@ -58,172 +63,41 @@ async def poll_device(
     full_read_start_time: float = 0.0
     full_read_end_time: float = 0.0
 
+    full_read_start_time = time.time()
+
     try:
         logger.info("Читаю регистры fc04")
-        full_read_start_time = time.time()  # когда начали (epoch)
-        # старт измерения длительности (монотонно)
-        read_start_time: float = time.perf_counter()
-
-        readed_data = await read_fc04_input_register(
+        (raw_readed_data_fc04, is_transport_correct_04) = await read_block(
+            read_fc04_input_register,
+            4,
             device_being_polled,
-            offset=device_poll_settings.offset,
-            read_count=device_poll_settings.read_count,
-            plc_id=device_poll_settings.device_id,
+            device_poll_settings,
         )
-        if readed_data and readed_data.isError() is not True:
-            raw_readed_data_fc04.ok = True
-
-        read_stop_time = time.perf_counter()
-        read_end_time = time.time()  # когда закончили (epoch)
-        duration_ms = (read_stop_time - read_start_time) * 1000
-
-        is_not_correct_reading_fc04 = False
-
-        if readed_data and (readed_data.isError() is True):
-            raw_readed_data_fc04.ok = False
-            exception_code = readed_data.exception_code
-            is_not_correct_reading_fc04 = True
-            err_message = "1. Ошибка от PLC. Регистры - fc04"
-            logger.warning(err_message)
-            logger.warning("Код ошибки: %s", exception_code)
-
-            if raw_error_info is None:
-                raw_error_info = ErrorInfo(
-                    exception_code=exception_code,
-                    message=err_message,
-                    kind=KindState.DEVICE,
-                )
-
-            if raw_readed_data_fc04.current_error_info is None:
-                raw_readed_data_fc04.current_error_info = raw_error_info
 
     except RuntimeError as err:
-        raw_readed_data_fc04.ok = False
-        is_not_correct_reading_fc04 = True
-        err_message = "2. Ошибка от PLC. Регистры - fc04"
-        logger.warning(err_message)
-        logger.warning("RuntimeError: %s", err)
-        if raw_error_info is None:
-            raw_error_info = ErrorInfo(
-                exception_code=None,
-                message=err_message,
-                kind=KindState.TRANSPORT,
-            )
+        logger.error("Ошибка: %s", err)
 
-    finally:
-        if readed_data:
-            raw_readed_data_fc04.fc = 4
-            raw_readed_data_fc04.unit_id = device_poll_settings.device_id
-            raw_readed_data_fc04.addr = device_poll_settings.offset
-            raw_readed_data_fc04.count = device_poll_settings.read_count
-            if hasattr(readed_data, "registers"):
-                raw_readed_data_fc04.registers = readed_data.registers[:]
-            raw_readed_data_fc04.duration_ms = duration_ms
-            raw_readed_data_fc04.ts_block_end = read_end_time
-            if raw_readed_data_fc04 and raw_error_info:
-                raw_readed_data_fc04.current_error_info = ErrorInfo(
-                    message=raw_error_info.message,
-                    kind=raw_error_info.kind,
-                    exception_code=raw_error_info.exception_code,
-                    exc_type=raw_error_info.exc_type,
-                )
-        if raw_error_info:
-            readed_data = None
-
-    if is_not_correct_reading_fc04:
+    if not is_transport_correct_04:
         try:
             logger.info("Читаю регистры fc03")
-            # старт измерения длительности (монотонно)
-            read_start_time = time.perf_counter()
-
-            readed_data = await read_fc03_holding_register(
+            (raw_readed_data_fc03, is_transport_correct_03) = await read_block(
+                read_fc03_holding_register,
+                4,
                 device_being_polled,
-                offset=device_poll_settings.offset,
-                read_count=device_poll_settings.read_count,
-                plc_id=device_poll_settings.device_id,
+                device_poll_settings,
             )
-            if readed_data and readed_data.isError() is not True:
-                raw_readed_data_fc03.ok = True
-            read_stop_time = time.perf_counter()
-            read_end_time = time.time()  # когда закончили (epoch)
-            duration_ms = (read_stop_time - read_start_time) * 1000
-
-            if readed_data and (readed_data.isError() is True):
-                raw_readed_data_fc03.ok = False
-                exception_code = readed_data.exception_code
-                err_message = "1. Ошибка от PLC. Регистры - fc03"
-                logger.warning(err_message)
-                logger.warning("Код ошибки: %s", exception_code)
-
-                if raw_error_info is None:
-                    raw_error_info = ErrorInfo(
-                        exception_code=exception_code,
-                        message=err_message,
-                        kind=KindState.DEVICE,
-                    )
-
-                if raw_readed_data_fc03.current_error_info is None:
-                    raw_readed_data_fc03.current_error_info = raw_error_info
 
         except RuntimeError as err:
-            raw_readed_data_fc03.ok = False
-            # is_not_correct_reading_fc03 = True
-            err_message = "2. Ошибка от PLC. Регистры - fc03"
-            logger.warning(err_message)
-            logger.warning("RuntimeError: %s", err)
-            if raw_error_info is None:
-                raw_error_info = ErrorInfo(
-                    exception_code=None,
-                    message=err_message,
-                    kind=KindState.TRANSPORT,
-                )
-        finally:
-            if readed_data:
-                raw_readed_data_fc03.fc = 3
-                raw_readed_data_fc03.unit_id = device_poll_settings.device_id
-                raw_readed_data_fc03.addr = device_poll_settings.offset
-                raw_readed_data_fc03.count = device_poll_settings.read_count
-                # TODO Проверить, скопировалось ли или нет....
-                if hasattr(readed_data, "registers"):
-                    raw_readed_data_fc03.registers = readed_data.registers[:]
-                raw_readed_data_fc03.duration_ms = duration_ms
-                raw_readed_data_fc03.ts_block_end = read_end_time
-                if raw_readed_data_fc03 and raw_error_info:
-                    raw_readed_data_fc03.current_error_info = ErrorInfo(
-                        message=raw_error_info.message,
-                        kind=raw_error_info.kind,
-                        exception_code=raw_error_info.exception_code,
-                        exc_type=raw_error_info.exc_type,
-                    )
+            logger.error("Ошибка: %s", err)
 
-    read_stop_time = time.perf_counter()
     full_read_end_time = time.time()
     readed_poll_result.blocks.append(raw_readed_data_fc04)
     readed_poll_result.blocks.append(raw_readed_data_fc03)
+
     readed_poll_result.ts_poll_start = full_read_start_time
     readed_poll_result.ts_poll_end = full_read_end_time
-    if raw_readed_data_fc03.ok or (
-        hasattr(raw_readed_data_fc03, "current_error_info")
-        and (
-            raw_readed_data_fc03.current_error_info
-            and (raw_readed_data_fc03.current_error_info.kind)
-            and (
-                raw_readed_data_fc03.current_error_info.kind == KindState.DEVICE
-            )
-        )  # noqa: E501
-        or (
-            hasattr(raw_readed_data_fc04, "current_error_info")
-            and (
-                raw_readed_data_fc04.current_error_info
-                and (raw_readed_data_fc04.current_error_info.kind)
-                and (
-                    raw_readed_data_fc04.current_error_info.kind
-                    == KindState.DEVICE
-                )
-            )  # noqa: E501
-            or raw_readed_data_fc04.ok
-        )
-    ):
+
+    if is_transport_correct_04 or is_transport_correct_03:
         readed_poll_result.connection_state = ConnectionState.UP
 
     return readed_poll_result
