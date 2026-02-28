@@ -1,3 +1,10 @@
+"""
+Проверяет:
+ - подъем сервера
+  - открытие TCP соединения
+  - чтение регистров
+"""
+
 import asyncio
 
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp

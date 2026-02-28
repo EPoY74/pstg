@@ -1,3 +1,10 @@
+"""
+Проверяет:
+ - connection_state == UP
+ - данные попадают в блок FC04
+ - fallback не используется
+"""
+
 import asyncio
 
 from pstg.app.collector import poll_device

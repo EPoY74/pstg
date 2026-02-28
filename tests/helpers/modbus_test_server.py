@@ -1,3 +1,13 @@
+"""
+Что умеет:
+- поднять реальный ModbusTcpServer
+- остановить его
+- записать input registers
+- записать holding registers
+Returns:
+    _type_: _description_
+"""
+
 import asyncio
 import socket
 from contextlib import suppress

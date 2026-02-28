@@ -1,3 +1,10 @@
+"""
+Проверяет:
+- ответ устройства с ошибкой все равно дает UP
+- оба блока содержат DEVICE error при невалидном адресе
+  - текущий контракт соблюдается
+"""
+
 import asyncio
 
 from pstg.app.collector import poll_device
