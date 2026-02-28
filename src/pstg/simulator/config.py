@@ -7,6 +7,8 @@ from pathlib import Path
 class RegisterBlockConfig:
     address: int
     values: list[int]
+    interval_s: float | None = None
+    step: int = 1
 
 
 @dataclass(slots=True)
@@ -26,7 +28,16 @@ def _parse_register_blocks(raw_blocks: list[dict] | None) -> list[RegisterBlockC
     for block in raw_blocks:
         address = int(block["address"])
         values = [int(value) for value in block["values"]]
-        blocks.append(RegisterBlockConfig(address=address, values=values))
+        interval_s = block.get("interval_s")
+        step = int(block.get("step", 1))
+        blocks.append(
+            RegisterBlockConfig(
+                address=address,
+                values=values,
+                interval_s=float(interval_s) if interval_s is not None else None,
+                step=step,
+            )
+        )
     return blocks
 
 

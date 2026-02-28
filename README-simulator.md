@@ -1,74 +1,76 @@
 # PSTG Modbus Simulator
 
-This simulator lets you run and improve `pstg` without real PLC or gateway hardware.
+Этот симулятор позволяет разрабатывать и проверять `pstg` без реального PLC, шлюза или другого Modbus-оборудования.
 
-It starts a Modbus TCP server with configurable:
+Он поднимает Modbus TCP сервер с настраиваемыми:
 
 - `host`
 - `port`
 - `device_id`
-- `input_registers` for FC04
-- `holding_registers` for FC03
+- `input_registers` для `FC04`
+- `holding_registers` для `FC03`
+- автоизменением значений регистров по таймеру
 
-## Why it is useful
+## Зачем он нужен
 
-Use it when you want to:
+Используй симулятор, если нужно:
 
-- develop `pstg` without physical equipment
-- test address maps
-- check fallback `FC04 -> FC03`
-- debug reconnect logic
-- prepare new polling code safely
+- разрабатывать `pstg` без физического оборудования
+- проверять карту адресов
+- тестировать fallback `FC04 -> FC03`
+- отлаживать reconnect-логику
+- безопасно писать и проверять новый polling-код
+- наблюдать, как меняются значения во времени
 
-## Requirements
+## Требования
 
 - Python 3.12+
-- project dependencies installed
+- установленные зависимости проекта
 
-From the repository root:
+Из корня репозитория:
 
 ```powershell
 uv sync
 uv pip install -e .
 ```
 
-## Quick start
+## Быстрый старт
 
-Run with built-in default registers:
+Запуск со встроенной конфигурацией по умолчанию:
 
 ```powershell
 uv run python -m pstg.simulator.server
 ```
 
-Default values:
+Значения по умолчанию:
 
 - host: `127.0.0.1`
 - port: `1502`
 - device_id: `1`
-- FC04 registers at address `0`: `[101, 102, 103, 104]`
-- FC03 registers at address `0`: `[201, 202, 203, 204]`
+- FC04 регистры с адреса `0`: `[101, 102, 103, 104]`
+- FC03 регистры с адреса `0`: `[201, 202, 203, 204]`
 
-## Run with config file
+## Запуск с конфигом
 
-Example config file: [simulator.example.json](C:\repos-win\source\pstg\simulator.example.json)
+Пример конфига: [simulator.example.json](C:\repos-win\source\pstg\simulator.example.json)
 
-Run:
+Запуск:
 
 ```powershell
 uv run python -m pstg.simulator.server --config simulator.example.json
 ```
 
-## Override config from CLI
+## Переопределение параметров из CLI
 
-You can override network settings without changing JSON:
+Можно переопределить сетевые параметры без изменения JSON:
 
 ```powershell
 uv run python -m pstg.simulator.server --config simulator.example.json --host 0.0.0.0 --port 1503 --device-id 2
 ```
 
-## Config format
+## Формат конфига
 
-Example:
+Пример:
 
 ```json
 {
@@ -76,55 +78,92 @@ Example:
   "port": 1502,
   "device_id": 1,
   "input_registers": [
-    { "address": 0, "values": [101, 102, 103, 104] },
+    { "address": 0, "values": [101, 102, 103, 104], "interval_s": 1.0, "step": 1 },
     { "address": 10, "values": [501, 502] }
   ],
   "holding_registers": [
     { "address": 0, "values": [201, 202, 203, 204] },
-    { "address": 20, "values": [901, 902, 903] }
+    { "address": 20, "values": [901, 902, 903], "interval_s": 2.0, "step": 10 }
   ]
 }
 ```
 
-Meaning:
+Что это значит:
 
-- each block writes several values starting from `address`
-- `input_registers` are used by FC04
-- `holding_registers` are used by FC03
+- каждый блок записывает несколько значений, начиная с `address`
+- `input_registers` используются для `FC04`
+- `holding_registers` используются для `FC03`
+- `interval_s` необязателен и включает автообновление блока
+- `step` необязателен и задает, на сколько увеличивать каждое значение при обновлении
 
-## Connect PSTG to simulator
+## Режим автообновления
 
-Point your collector config to:
+Если у блока заданы:
+
+- `interval_s`
+- `step`
+
+то симулятор будет автоматически обновлять этот блок.
+
+Пример:
+
+```json
+{
+  "address": 0,
+  "values": [100, 200],
+  "interval_s": 1.0,
+  "step": 5
+}
+```
+
+Поведение:
+
+- при старте: `[100, 200]`
+- через 1 секунду: `[105, 205]`
+- через 2 секунды: `[110, 210]`
+
+Это полезно для:
+
+- проверки трендов
+- проверки того, что polling видит изменение значений
+- разработки будущей decode-логики
+
+## Как подключить PSTG к симулятору
+
+Направь конфиг коллектора на:
 
 - host: `127.0.0.1`
 - port: `1502`
 - device_id: `1`
 
-Then run your collector:
+После этого запусти collector:
 
 ```powershell
 uv run python -m pstg.app.collector
 ```
 
-## Typical dev scenarios
+## Типовые сценарии разработки
 
-### 1. Happy path for FC04
+### 1. Успешное чтение по FC04
 
-Set values in `input_registers` and let `pstg` read them through FC04.
+Заполни `input_registers` и проверь, что `pstg` читает значения через `FC04`.
 
-### 2. Fallback to FC03
+### 2. Fallback на FC03
 
-Leave FC04 addresses invalid for the poll range, but configure valid values in FC03.
-This helps you test fallback behavior.
+Оставь адреса `FC04` невалидными для нужного диапазона, а корректные значения задай в `FC03`.
+Так можно проверить fallback-поведение.
 
-### 3. Address map experiments
+### 3. Проверка карты адресов
 
-Add several blocks with different start addresses and verify that your code reads the expected range.
+Добавь несколько блоков с разными стартовыми адресами и проверь, что код читает нужный диапазон.
 
-## Current limitations
+### 4. Живые изменяющиеся значения
 
-- values are static after startup
-- config reload is not implemented
-- coils and discrete inputs are allocated but not configured from JSON
+Добавь `interval_s` и `step` в блок и наблюдай, как значения меняются без перезапуска симулятора.
 
-This is enough for current PSTG development, tests, and further refactoring.
+## Текущие ограничения
+
+- reload конфига на лету не реализован
+- coils и discrete inputs выделены в памяти, но пока не настраиваются через JSON
+
+Для текущей разработки и улучшения `pstg` этого уже достаточно.
