@@ -118,7 +118,9 @@ class DevModbusServer:
         while True:
             await asyncio.sleep(block.interval_s)
             current_values = [value + block.step for value in current_values]
-            self.device_context.setValues(function_code, block.address, current_values)
+            self.device_context.setValues(
+                function_code, block.address, current_values
+            )
             logger.info(
                 "Updated fc%s address=%s values=%s",
                 function_code,
@@ -133,7 +135,8 @@ def build_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--config",
-        help="Path to JSON config file. If omitted, built-in defaults are used.",
+        help="Path to JSON config file. "
+        + "If omitted, built-in defaults are used.",
     )
     parser.add_argument("--host", help="Override host from config")
     parser.add_argument("--port", type=int, help="Override port from config")
