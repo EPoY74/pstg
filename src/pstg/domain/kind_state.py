@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class KindState(str, Enum):
+class KindState(StrEnum):
     """Определяет источник ошибки.
     Values:
         TRANSPORT: Ошибка транспорта
