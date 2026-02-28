@@ -2,10 +2,10 @@ from enum import Enum
 
 
 class KindState(str, Enum):
-    """Определяет источник получения данных.
+    """Определяет источник ошибки.
     Values:
-        TRANSPORT: Фейковые данные
-        DEVICE: Данные от устройства
+        TRANSPORT: Ошибка транспорта
+        DEVICE: Ошибка устройства
     """
 
     TRANSPORT = "TRANSPORT"
