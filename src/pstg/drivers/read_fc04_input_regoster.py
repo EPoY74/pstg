@@ -13,7 +13,8 @@ async def read_fc04_input_register(
     """
     Читает данные из input registers (FC04) ПЛК.
     Args:
-        pstg_client (AsyncModbusTcpClient): оединение с сервером, от которого получаем данные
+        pstg_client (AsyncModbusTcpClient): оединение с сервером,
+        от которого получаем данные
         offset (int): Смещение (адрес), откуда читаем
         read_count (int): Сколько читать от смещения (адреса)
         device_id (int): ID устройства, с которого считываем данные
@@ -32,7 +33,7 @@ async def read_fc04_input_register(
         )
         if input_regs is None:
             raise RuntimeError(
-                f"FC04 returned None: plc_id={plc_id} offset={offset} count={read_count}"
+                f"FC04 returned None: plc_id={plc_id} offset={offset} count={read_count}"  # noqa: E501
             )
     except ModbusException as err:
         raise RuntimeError(
