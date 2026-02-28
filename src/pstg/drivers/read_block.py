@@ -19,6 +19,13 @@ from pstg.domain.raw_block_result import RawBlockResult
 Reader = Callable[..., Awaitable[ModbusPDU | None]]
 
 
+def _response_flags(read_data: ModbusPDU | None) -> tuple[bool, bool, bool]:
+    has_response: bool = read_data is not None
+    is_success_data = has_response and not read_data.isError()
+    is_error_data = has_response and read_data.isError()
+    return has_response, is_success_data, is_error_data
+
+
 async def read_block(
     reader: Reader,
     fc: int,
@@ -50,8 +57,9 @@ async def read_block(
     """
 
     raw_was_read_data_fc: RawBlockResult = RawBlockResult()
-    raw_error_info: ErrorInfo | None = None
     got_response: bool = False
+    is_error_data: bool = False
+    was_read_data: ModbusPDU | None = None
 
     read_stop_time: float = 0.0
     read_end_time: float = 0.0
@@ -60,86 +68,50 @@ async def read_block(
     try:
         read_start_time: float = time.perf_counter()
 
-        readed_data = await reader(
+        was_read_data = await reader(
             device_being_polled,
             offset=device_poll_settings.offset,
             read_count=device_poll_settings.read_count,
             plc_id=device_poll_settings.device_id,
         )
 
-        # ok?
-        # READ_WAS_SUCCESSFUL = ...
-
-        # if READ_WAS_SUCCESSFUL:
-        #     ...
-        #     return корректный возврат
-        # else:
-        #     ...
-        #     return информация об ошибке
-
-        if readed_data is None:
-            raw_was_read_data_fc.ok = False
-
-        if readed_data and readed_data.isError() is not True:
-            got_response = True
-            raw_was_read_data_fc.ok = True
+        (got_response, raw_was_read_data_fc.ok, is_error_data) = (
+            _response_flags(was_read_data)
+        )
 
         read_stop_time = time.perf_counter()
         read_end_time = time.time()  # когда закончили (epoch)
         duration_ms = (read_stop_time - read_start_time) * 1000
 
-        if readed_data and (readed_data.isError() is True):
-            got_response = True
-            raw_was_read_data_fc.ok = False
-            exception_code = readed_data.exception_code
+        if was_read_data and is_error_data:
+            exception_code = was_read_data.exception_code
             err_message = f"1. Ошибка от PLC. Регистры - fc{fc}"
-
-            # if raw_error_info is None:
-            raw_error_info = ErrorInfo(
+            raw_was_read_data_fc.current_error_info = ErrorInfo(
                 exception_code=exception_code,
                 message=err_message,
                 kind=KindState.DEVICE,
             )
 
-            if raw_was_read_data_fc.current_error_info is None:
-                raw_was_read_data_fc.current_error_info = raw_error_info
+    except RuntimeError as err:
+        got_response = False
+        raw_was_read_data_fc.ok = False
+        err_message = f"2. Ошибка от PLC(транспорт). Регистры - fc{fc}: {err}"
+        raw_was_read_data_fc.current_error_info = ErrorInfo(
+            exception_code=None,
+            message=err_message,
+            kind=KindState.TRANSPORT,
+        )
 
-        if readed_data:
+    finally:
+        if was_read_data:
             raw_was_read_data_fc.fc = fc
             raw_was_read_data_fc.unit_id = device_poll_settings.device_id
             raw_was_read_data_fc.addr = device_poll_settings.offset
             raw_was_read_data_fc.count = device_poll_settings.read_count
-            if hasattr(readed_data, "registers"):
-                raw_was_read_data_fc.registers = readed_data.registers[:]
+            if hasattr(was_read_data, "registers"):
+                raw_was_read_data_fc.registers = was_read_data.registers[:]
             raw_was_read_data_fc.duration_ms = duration_ms
             raw_was_read_data_fc.ts_block_end = read_end_time
-            # if raw_error_info:
-            #     raw_was_read_data_fc.current_error_info = ErrorInfo(
-            #         message=raw_error_info.message,
-            #         kind=raw_error_info.kind,
-            #         exception_code=raw_error_info.exception_code,
-            #         exc_type=raw_error_info.exc_type,
-            #     )
-
-    except RuntimeError as err:
-        got_response = False
-        raw_was_read_data_fc.ok = False
-        err_message = f"2. Ошибка от PLC. Регистры - fc{fc}: {err}"
-        if raw_error_info is None:
-            raw_error_info = ErrorInfo(
-                exception_code=None,
-                message=err_message,
-                kind=KindState.TRANSPORT,
-            )
-
-    finally:
-        if raw_error_info:
-            raw_was_read_data_fc.current_error_info = ErrorInfo(
-                message=raw_error_info.message,
-                kind=raw_error_info.kind,
-                exception_code=raw_error_info.exception_code,
-                exc_type=raw_error_info.exc_type,
-            )
 
     return (
         raw_was_read_data_fc,
