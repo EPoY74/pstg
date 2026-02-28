@@ -38,6 +38,15 @@ def _get_connection_state(is_correct: bool) -> ConnectionState:
     return ConnectionState.UP if is_correct else ConnectionState.DOWN
 
 
+RECONNECT_DELAY_S: int = 10
+
+
+async def _reconnect_break(reason: str) -> None:
+    logger.warning("%s: Ожидаю %s секунд", reason, RECONNECT_DELAY_S)
+    await asyncio.sleep(RECONNECT_DELAY_S)
+    logger.warning("%s: Прерываю для переподключения", reason)
+
+
 async def poll_device(
     device_being_polled: AsyncModbusTcpClient,
     device_poll_settings: ModbusDeviceReadSettings,
@@ -149,13 +158,21 @@ async def poll_forever(
                         device_being_polled, device_poll_settings
                     )
                     yield poll_result
+                    if poll_result.connection_state == ConnectionState.DOWN:
+                        logger.warning("Проблема с подключением к устройству.")
+                        await _reconnect_break("Dconnection_state=DOWN")
+                        break
 
                     #  TODO реализовать задержку, что бы она
                     # не плавала. Высчитывать, сколько будет между ними
 
                     await asyncio.sleep(device_config.poll_interval_s)
                 except RuntimeError as err:
-                    logger.error("Ошибка: %s", err)
+                    logger.error("Runtime Error: Ошибка: %s", err)
+                    # Это страховка. Скорее всего это не нужно
+                    # Но лишним - не будет
+                    await _reconnect_break("Runtime Error")
+                    break
 
         finally:
             logger.info(
