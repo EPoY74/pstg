@@ -12,7 +12,7 @@ def test_load_simulator_config_reads_register_blocks() -> None:
             '  "port": 1502,\n'
             '  "device_id": 3,\n'
             '  "input_registers": [\n'
-            '    { "address": 0, "values": [10, 20] }\n'
+            '    { "address": 0, "values": [10, 20], "interval_s": 1.5, "step": 2 }\n'
             "  ],\n"
             '  "holding_registers": [\n'
             '    { "address": 5, "values": [30, 40, 50] }\n'
@@ -33,6 +33,8 @@ def test_load_simulator_config_reads_register_blocks() -> None:
     assert config.input_registers is not None
     assert config.input_registers[0].address == 0
     assert config.input_registers[0].values == [10, 20]
+    assert config.input_registers[0].interval_s == 1.5
+    assert config.input_registers[0].step == 2
     assert config.holding_registers is not None
     assert config.holding_registers[0].address == 5
     assert config.holding_registers[0].values == [30, 40, 50]
