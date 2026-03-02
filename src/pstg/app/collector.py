@@ -10,18 +10,22 @@ from collections.abc import AsyncIterator
 
 from pymodbus.client import AsyncModbusTcpClient
 
-from pstg.app.modbus_corfig import get_modbus_config
+from pstg.app.modbus_config import get_modbus_config
 from pstg.app.read_config import get_device_read_settings
+from pstg.app.read_signal_config import get_signals_config
 from pstg.domain.connection_state import ConnectionState
 from pstg.domain.kind_state import KindState
 from pstg.domain.modbus_config import ModbusConfig
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.poll_result import PollResult
 from pstg.domain.raw_block_result import RawBlockResult
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
 from pstg.drivers.read_block import read_block
 from pstg.drivers.read_fc03_holding_register import read_fc03_holding_register
 from pstg.drivers.read_fc04_input_regoster import read_fc04_input_register
+from pstg.drivers.read_signals import read_signals
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +53,7 @@ async def _reconnect_break(reason: str) -> None:
 
 async def poll_device(
     device_being_polled: AsyncModbusTcpClient,
-    device_poll_settings: ModbusDeviceReadSettings,
+    device_poll_settings: RegistersModbusDeviceSettings,
 ) -> PollResult:
 
     readed_poll_result: PollResult = PollResult()
@@ -108,7 +112,8 @@ async def poll_device(
 
 
 async def poll_forever(
-    device_config: ModbusConfig, device_poll_settings: ModbusDeviceReadSettings
+    device_config: ModbusConfig,
+    device_poll_settings: RegistersModbusDeviceSettings,
 ) -> AsyncIterator[PollResult]:
 
     poll_result: PollResult = PollResult()
@@ -156,6 +161,12 @@ async def poll_forever(
                 try:
                     poll_result = await poll_device(
                         device_being_polled, device_poll_settings
+                    )
+                    output_signal = await read_signals(
+                        3,
+                        device_being_polled,
+                        device_poll_settings,
+                        get_signals_config(),
                     )
                     yield poll_result
                     if poll_result.connection_state == ConnectionState.DOWN:
