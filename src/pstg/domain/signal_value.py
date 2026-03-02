@@ -5,9 +5,20 @@ from pstg.domain.signal_sourse import SignalSource
 
 @dataclass
 class SignalValue:
-    value: float | None  # None если нет валидного значения
-    unit: str  # "bar"
-    ok: bool  # True если value валиден
-    ts: float  # epoch seconds
-    source: SignalSource | None  # откуда декодировали
-    error: str | None = None  # коротко, если ok=False
+    # Значение сигнала или None если нет валидного значения
+    value: float = 0.0
+
+    # "bar"
+    unit: str = ""
+
+    # True если value валиден
+    ok: bool = False
+
+    # epoch seconds
+    ts: float = 0.0
+
+    # откуда декодировали
+    source: SignalSource | None = None
+
+    # коротко, если ok=False
+    error: str | None = None
