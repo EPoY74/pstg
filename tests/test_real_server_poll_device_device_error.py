@@ -10,7 +10,9 @@ import asyncio
 from pstg.app.collector import poll_device
 from pstg.domain.connection_state import ConnectionState
 from pstg.domain.kind_state import KindState
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
 from tests.helpers.modbus_test_server import ModbusTestServer
 
@@ -25,7 +27,7 @@ def test_poll_device_returns_up_when_server_replies_with_device_error() -> None:
             client = await open_connection_modbus_tcp(server.host, server.port)
             result = await poll_device(
                 client,
-                ModbusDeviceReadSettings(
+                RegistersModbusDeviceSettings(
                     device_id=server.device_id,
                     offset=150,
                     read_count=2,

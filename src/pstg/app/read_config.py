@@ -1,7 +1,9 @@
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 
 
-def get_device_read_settings() -> ModbusDeviceReadSettings:
+def get_device_read_settings() -> RegistersModbusDeviceSettings:
     """
     Функция содержит настройки устройства, с которого читаем информацию
 
@@ -19,6 +21,6 @@ def get_device_read_settings() -> ModbusDeviceReadSettings:
     # Правило Modbus: значения могут занимать несколько регистров
     #  (напр. float32 обычно = 2 регистра)
     READ_DATA_COUNT: int = 12
-    return ModbusDeviceReadSettings(
+    return RegistersModbusDeviceSettings(
         device_id=DEVICE_ID, offset=DATA_OFFSET, read_count=READ_DATA_COUNT
     )

@@ -5,8 +5,10 @@ import asyncio
 from pstg.app import collector
 from pstg.domain.connection_state import ConnectionState
 from pstg.domain.modbus_config import ModbusConfig
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.poll_result import PollResult
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 
 
 class DummyClient:
@@ -50,7 +52,7 @@ def test_poll_forever_reconnects_after_down_result(monkeypatch) -> None:
     async def run_scenario() -> tuple[PollResult, PollResult]:
         generator = collector.poll_forever(
             ModbusConfig(host="127.0.0.1", port=502, poll_interval_s=0),
-            ModbusDeviceReadSettings(device_id=1, offset=0, read_count=1),
+            RegistersModbusDeviceSettings(device_id=1, offset=0, read_count=1),
         )
 
         first_result = await anext(generator)

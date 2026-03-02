@@ -1,8 +1,12 @@
-#   Проверяет device error: got_response=True, ok=False, ошибка заполнена, регистры сохраняются.
+#   Проверяет device error: got_response=True, ok=False, ошибка заполнена,
+#  регистры сохраняются.
+
 import asyncio
 
 from pstg.domain.kind_state import KindState
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 from pstg.drivers.read_block import read_block
 
 
@@ -22,7 +26,9 @@ async def device_error_reader(*args, **kwargs) -> DeviceErrorResponse:
 
 
 def test_read_block_marks_device_error_but_keeps_response() -> None:
-    settings = ModbusDeviceReadSettings(device_id=1, offset=0, read_count=2)
+    settings = RegistersModbusDeviceSettings(
+        device_id=1, offset=0, read_count=2
+    )
 
     block, got_response = asyncio.run(
         read_block(device_error_reader, 4, object(), settings)

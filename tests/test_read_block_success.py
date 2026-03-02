@@ -1,7 +1,9 @@
 # Проверяет успешное чтение блока и заполнение метаданных.
 import asyncio
 
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 from pstg.drivers.read_block import read_block
 
 
@@ -18,7 +20,9 @@ async def successful_reader(*args, **kwargs) -> SuccessfulResponse:
 
 
 def test_read_block_returns_successful_block_with_registers() -> None:
-    settings = ModbusDeviceReadSettings(device_id=1, offset=5, read_count=3)
+    settings = RegistersModbusDeviceSettings(
+        device_id=1, offset=5, read_count=3
+    )
 
     block, got_response = asyncio.run(
         read_block(successful_reader, 4, object(), settings)

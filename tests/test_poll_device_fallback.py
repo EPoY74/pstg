@@ -5,8 +5,10 @@ from pstg.app import collector
 from pstg.domain.connection_state import ConnectionState
 from pstg.domain.error_info import ErrorInfo
 from pstg.domain.kind_state import KindState
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.raw_block_result import RawBlockResult
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 
 
 def test_poll_device_uses_fc03_after_fc04_device_error(monkeypatch) -> None:
@@ -43,7 +45,7 @@ def test_poll_device_uses_fc03_after_fc04_device_error(monkeypatch) -> None:
     result = asyncio.run(
         collector.poll_device(
             device_being_polled=object(),
-            device_poll_settings=ModbusDeviceReadSettings(
+            device_poll_settings=RegistersModbusDeviceSettings(
                 device_id=1,
                 offset=0,
                 read_count=3,
