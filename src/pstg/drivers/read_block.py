@@ -6,17 +6,19 @@
 """
 
 import time
-from collections.abc import Awaitable, Callable
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.pdu import ModbusPDU
 
 from pstg.domain.error_info import ErrorInfo
 from pstg.domain.kind_state import KindState
-from pstg.domain.modbus_device_read_settings import ModbusDeviceReadSettings
 from pstg.domain.raw_block_result import RawBlockResult
+from pstg.domain.reader import Reader
+from pstg.domain.registers_modbus_device_settings import (
+    RegistersModbusDeviceSettings,
+)
 
-Reader = Callable[..., Awaitable[ModbusPDU | None]]
+# Reader = Callable[..., Awaitable[ModbusPDU | None]]
 
 
 def _response_flags(read_data: ModbusPDU | None) -> tuple[bool, bool, bool]:
@@ -30,7 +32,7 @@ async def read_block(
     reader: Reader,
     fc: int,
     device_being_polled: AsyncModbusTcpClient,
-    device_poll_settings: ModbusDeviceReadSettings,
+    device_poll_settings: RegistersModbusDeviceSettings,
 ) -> tuple[RawBlockResult, bool]:
     """Читает с помощью переданной функции reader состояние
     modbus устройства
