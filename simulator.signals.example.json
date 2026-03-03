@@ -1,0 +1,58 @@
+{
+  "host": "127.0.0.1",
+  "port": 1505,
+  "device_id": 1,
+  "input_registers": [
+    {
+      "address": 0,
+      "values": [101, 102, 103, 104],
+      "interval_s": 1.0,
+      "step": 1,
+      "encoding": "raw"
+    }
+  ],
+  "holding_registers": [
+    {
+      "address": 0,
+      "values": [201, 202, 203, 204],
+      "interval_s": 2.0,
+      "step": 10,
+      "encoding": "raw"
+    },
+    {
+      "address": 56,
+      "values": [0, 16320],
+      "interval_s": 1.0,
+      "encoding": "f32",
+      "float_step": 0.1
+    },
+    {
+      "address": 58,
+      "values": [0, 16416],
+      "interval_s": 1.0,
+      "encoding": "f32",
+      "float_step": 0.2
+    },
+    {
+      "address": 60,
+      "values": [0, 16480],
+      "interval_s": 1.0,
+      "encoding": "f32",
+      "float_step": 0.3
+    },
+    {
+      "address": 64,
+      "values": [32768, 17136],
+      "interval_s": 1.0,
+      "encoding": "f32",
+      "float_step": 1.5
+    },
+    {
+      "address": 66,
+      "values": [24576, 17366],
+      "interval_s": 1.0,
+      "encoding": "f32",
+      "float_step": 5.0
+    }
+  ]
+}

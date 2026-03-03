@@ -12,6 +12,7 @@ import asyncio
 import logging
 from contextlib import suppress
 
+from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.datastore import (
     ModbusDeviceContext,
     ModbusSequentialDataBlock,
@@ -125,7 +126,7 @@ class DevModbusServer:
         current_values = list(block.values)
         while True:
             await asyncio.sleep(block.interval_s)
-            current_values = [value + block.step for value in current_values]
+            current_values = self._next_block_values(current_values, block)
             self.device_context.setValues(
                 function_code, block.address, current_values
             )
@@ -135,6 +136,29 @@ class DevModbusServer:
                 block.address,
                 current_values,
             )
+
+    @staticmethod
+    def _next_block_values(
+        current_values: list[int],
+        block: RegisterBlockConfig,
+    ) -> list[int]:
+        if block.encoding == "f32":
+            delta = block.float_step if block.float_step is not None else float(block.step)
+            decoded_values = AsyncModbusTcpClient.convert_from_registers(
+                current_values,
+                AsyncModbusTcpClient.DATATYPE.FLOAT32,
+                word_order="little",
+            )
+            if not isinstance(decoded_values, list):
+                decoded_values = [decoded_values]
+            updated_values = [value + delta for value in decoded_values]
+            return AsyncModbusTcpClient.convert_to_registers(
+                updated_values,
+                AsyncModbusTcpClient.DATATYPE.FLOAT32,
+                word_order="little",
+            )
+
+        return [value + block.step for value in current_values]
 
 
 def build_argument_parser() -> argparse.ArgumentParser:

@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 
 @dataclass(slots=True)
@@ -9,6 +10,8 @@ class RegisterBlockConfig:
     values: list[int]
     interval_s: float | None = None
     step: int = 1
+    encoding: Literal["raw", "f32"] = "raw"
+    float_step: float | None = None
 
 
 @dataclass(slots=True)
@@ -36,6 +39,12 @@ def _parse_register_blocks(raw_blocks: list[dict] | None) -> list[RegisterBlockC
                 values=values,
                 interval_s=float(interval_s) if interval_s is not None else None,
                 step=step,
+                encoding=block.get("encoding", "raw"),
+                float_step=(
+                    float(block["float_step"])
+                    if block.get("float_step") is not None
+                    else None
+                ),
             )
         )
     return blocks
