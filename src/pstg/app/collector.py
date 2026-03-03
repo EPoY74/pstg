@@ -1,9 +1,5 @@
-# запуск:  uv run python -m pstg.app.collector
-# перед запуском может понадобиться выполнение команд:
-# uv sync
-# uv pip install -e .   - Использовать в проде запрещено!!!!
-
 import asyncio
+import copy
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -14,23 +10,18 @@ from pstg.app.modbus_config import get_modbus_config
 from pstg.app.read_config import get_device_read_settings
 from pstg.app.read_signal_config import get_signals_config
 from pstg.domain.connection_state import ConnectionState
-from pstg.domain.kind_state import KindState
 from pstg.domain.modbus_config import ModbusConfig
 from pstg.domain.poll_result import PollResult
-from pstg.domain.raw_block_result import RawBlockResult
 from pstg.domain.registers_modbus_device_settings import (
     RegistersModbusDeviceSettings,
 )
 from pstg.drivers.open_connection_modbus_tcp import open_connection_modbus_tcp
-from pstg.drivers.read_block import read_block
-from pstg.drivers.read_fc03_holding_register import read_fc03_holding_register
-from pstg.drivers.read_fc04_input_regoster import read_fc04_input_register
+from pstg.drivers.read_registers_safely import read_registers_safely
 from pstg.drivers.read_signals import read_signals
 
 logger = logging.getLogger(__name__)
 
 
-# Выше данной функции другие фунции не писать! Только импорты и т.д.!
 def init_logging() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -38,11 +29,7 @@ def init_logging() -> None:
     )
 
 
-def _get_connection_state(is_correct: bool) -> ConnectionState:
-    return ConnectionState.UP if is_correct else ConnectionState.DOWN
-
-
-RECONNECT_DELAY_S: int = 10
+RECONNECT_DELAY_S = 10
 
 
 async def _reconnect_break(reason: str) -> None:
@@ -55,70 +42,18 @@ async def poll_device(
     device_being_polled: AsyncModbusTcpClient,
     device_poll_settings: RegistersModbusDeviceSettings,
 ) -> PollResult:
-
-    readed_poll_result: PollResult = PollResult()
-
-    readed_poll_result.connection_state = ConnectionState.DOWN
-
-    raw_readed_data_fc04: RawBlockResult = RawBlockResult()
-    raw_readed_data_fc03: RawBlockResult = RawBlockResult()
-
-    full_read_start_time: float = 0.0
-    full_read_end_time: float = 0.0
-    full_read_start_time = time.time()
-
-    got_response_04: bool = False
-
-    try:
-        logger.info("Читаю регистры fc04")
-        (raw_readed_data_fc04, got_response_04) = await read_block(
-            read_fc04_input_register,
-            4,
-            device_being_polled,
-            device_poll_settings,
-        )
-        readed_poll_result.connection_state = _get_connection_state(
-            got_response_04
-        )
-    except RuntimeError as err:
-        logger.error("Ошибка: %s", err)
-
-    if (raw_readed_data_fc04.current_error_info) and (
-        raw_readed_data_fc04.current_error_info.kind == KindState.DEVICE
-    ):
-        try:
-            got_response_03: bool = False
-            logger.info("Читаю регистры fc03")
-            (raw_readed_data_fc03, got_response_03) = await read_block(
-                read_fc03_holding_register,
-                3,
-                device_being_polled,
-                device_poll_settings,
-            )
-            readed_poll_result.connection_state = _get_connection_state(
-                got_response_04 or got_response_03
-            )
-        except RuntimeError as err:
-            logger.error("Ошибка: %s", err)
-
-    full_read_end_time = time.time()
-    readed_poll_result.blocks.append(raw_readed_data_fc04)
-    readed_poll_result.blocks.append(raw_readed_data_fc03)
-
-    readed_poll_result.ts_poll_start = full_read_start_time
-    readed_poll_result.ts_poll_end = full_read_end_time
-
-    return readed_poll_result
+    return await read_registers_safely(
+        device_being_polled, device_poll_settings
+    )
 
 
 async def poll_forever(
     device_config: ModbusConfig,
     device_poll_settings: RegistersModbusDeviceSettings,
 ) -> AsyncIterator[PollResult]:
-
-    poll_result: PollResult = PollResult()
-    time_start: float = 0
-    time_end: float = 0
+    poll_result = PollResult()
+    time_start = 0.0
+    time_end = 0.0
 
     device_being_polled: AsyncModbusTcpClient | None = None
     while True:
@@ -138,7 +73,6 @@ async def poll_forever(
                     break
                 except ConnectionError as err:
                     time_end = time.time()
-
                     poll_result.connection_state = ConnectionState.DOWN
                     poll_result.ts_poll_start = time_start
                     poll_result.ts_poll_end = time_end
@@ -150,7 +84,6 @@ async def poll_forever(
                     )
                     await asyncio.sleep(30)
                     logger.warning("Повторное подключение...")
-                    continue
 
             logger.info(
                 "Коннект по ip %s порт %s поднят успешно!",
@@ -162,29 +95,25 @@ async def poll_forever(
                     poll_result = await poll_device(
                         device_being_polled, device_poll_settings
                     )
-                    output_signal = await read_signals(
-                        3,
-                        device_being_polled,
-                        device_poll_settings,
-                        get_signals_config(),
+                    poll_result.signals = copy.deepcopy(
+                        await read_signals(
+                            3,
+                            device_being_polled,
+                            device_poll_settings,
+                            get_signals_config(),
+                        )
                     )
                     yield poll_result
                     if poll_result.connection_state == ConnectionState.DOWN:
                         logger.warning("Проблема с подключением к устройству.")
-                        await _reconnect_break("Dconnection_state=DOWN")
+                        await _reconnect_break("connection_state=DOWN")
                         break
-
-                    #  TODO реализовать задержку, что бы она
-                    # не плавала. Высчитывать, сколько будет между ними
 
                     await asyncio.sleep(device_config.poll_interval_s)
                 except RuntimeError as err:
                     logger.error("Runtime Error: Ошибка: %s", err)
-                    # Это страховка. Скорее всего это не нужно
-                    # Но лишним - не будет
                     await _reconnect_break("Runtime Error")
                     break
-
         finally:
             logger.info(
                 "Закрываю Коннект по ip %s порт %s!",
@@ -200,20 +129,21 @@ async def main() -> None:
     async for result in poll_forever(
         get_modbus_config(), get_device_read_settings()
     ):
-        logger.info("%s", result)
-    return
+        logger.info("%s \n\n", result)
 
 
 if __name__ == "__main__":
-    # device_config: ModbusConfig = await get_modbus_config()
-    # ✅ Настройка логов только при запуске как скрипт
     try:
         init_logging()
-
         logger.info("Запуск Pump Station Telemetry Gateway")
         asyncio.run(main(), debug=False)
-
     except KeyboardInterrupt:
         logger.info("Пользователь нажал Ctrl+C")
     finally:
         logger.info("Остановка Pump Station Telemetry Gateway")
+        for i in range(5, 0, -1):
+            logger.info(
+                "Остановка Pump Station Telemetry Gateway через %d секунд", i
+            )
+            asyncio.run(asyncio.sleep(1))
+        logger.info("Pump Station Telemetry Gateway остановлен")
