@@ -12,6 +12,7 @@ class SignalsModbusDeviceSettings:
     signals_map: list[SignalSpec]  # Параметры сигналов
     """
 
-    offset: int  # Смещение от начала
+    start_address_of_block: int  # Смещение от начала
     read_count: int  # Сколько читать
+    fc: int  # С какого типа регистра читаем
     signals_map: list[SignalSpec]  # Параметры сигналов

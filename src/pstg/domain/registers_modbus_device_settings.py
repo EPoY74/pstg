@@ -15,3 +15,4 @@ class RegistersModbusDeviceSettings:
     device_id: int
     offset: int
     read_count: int
+    fc: int

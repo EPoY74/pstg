@@ -21,6 +21,11 @@ def get_device_read_settings() -> RegistersModbusDeviceSettings:
     # Правило Modbus: значения могут занимать несколько регистров
     #  (напр. float32 обычно = 2 регистра)
     READ_DATA_COUNT: int = 12
+
+    FC_REGISTERS: int = 3
     return RegistersModbusDeviceSettings(
-        device_id=DEVICE_ID, offset=DATA_OFFSET, read_count=READ_DATA_COUNT
+        device_id=DEVICE_ID,
+        offset=DATA_OFFSET,
+        read_count=READ_DATA_COUNT,
+        fc=FC_REGISTERS,
     )
