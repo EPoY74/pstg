@@ -31,15 +31,15 @@ def test_poll_device_returns_up_for_successful_fc04_read() -> None:
                     device_id=server.device_id,
                     offset=0,
                     read_count=4,
+                    fc=4,
                 ),
             )
 
             assert result.connection_state == ConnectionState.UP
-            assert len(result.blocks) == 2
+            assert len(result.blocks) == 1
             assert result.blocks[0].ok is True
             assert result.blocks[0].fc == 4
             assert result.blocks[0].registers == [1, 2, 3, 4]
-            assert result.blocks[1].ok is None
         finally:
             if client is not None:
                 client.close()

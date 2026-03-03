@@ -36,6 +36,9 @@ def test_poll_forever_reconnects_after_down_result(monkeypatch) -> None:
             return PollResult(connection_state=ConnectionState.DOWN)
         return PollResult(connection_state=ConnectionState.UP)
 
+    async def fake_read_signals(fc, device, settings, signals_setting):
+        return {}
+
     async def fake_sleep(delay: float) -> None:
         return None
 
@@ -46,13 +49,19 @@ def test_poll_forever_reconnects_after_down_result(monkeypatch) -> None:
         collector, "open_connection_modbus_tcp", fake_open_connection
     )
     monkeypatch.setattr(collector, "poll_device", fake_poll_device)
+    monkeypatch.setattr(collector, "read_signals", fake_read_signals)
     monkeypatch.setattr(collector.asyncio, "sleep", fake_sleep)
     monkeypatch.setattr(collector, "_reconnect_break", fake_reconnect_break)
 
     async def run_scenario() -> tuple[PollResult, PollResult]:
         generator = collector.poll_forever(
             ModbusConfig(host="127.0.0.1", port=502, poll_interval_s=0),
-            RegistersModbusDeviceSettings(device_id=1, offset=0, read_count=1),
+            RegistersModbusDeviceSettings(
+                device_id=1,
+                offset=0,
+                read_count=1,
+                fc=4,
+            ),
         )
 
         first_result = await anext(generator)

@@ -31,17 +31,15 @@ def test_poll_device_returns_up_when_server_replies_with_device_error() -> None:
                     device_id=server.device_id,
                     offset=150,
                     read_count=2,
+                    fc=4,
                 ),
             )
 
             assert result.connection_state == ConnectionState.UP
-            assert len(result.blocks) == 2
+            assert len(result.blocks) == 1
             assert result.blocks[0].ok is False
             assert result.blocks[0].current_error_info is not None
             assert result.blocks[0].current_error_info.kind == KindState.DEVICE
-            assert result.blocks[1].ok is False
-            assert result.blocks[1].current_error_info is not None
-            assert result.blocks[1].current_error_info.kind == KindState.DEVICE
         finally:
             if client is not None:
                 client.close()

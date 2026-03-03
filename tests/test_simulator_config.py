@@ -12,10 +12,10 @@ def test_load_simulator_config_reads_register_blocks() -> None:
             '  "port": 1502,\n'
             '  "device_id": 3,\n'
             '  "input_registers": [\n'
-            '    { "address": 0, "values": [10, 20], "interval_s": 1.5, "step": 2 }\n'
+            '    { "address": 0, "values": [10, 20], "interval_s": 1.5, "step": 2, "encoding": "raw" }\n'
             "  ],\n"
             '  "holding_registers": [\n'
-            '    { "address": 5, "values": [30, 40, 50] }\n'
+            '    { "address": 5, "values": [30, 40, 50], "encoding": "f32", "float_step": 0.5 }\n'
             "  ]\n"
             "}\n"
         ),
@@ -35,6 +35,9 @@ def test_load_simulator_config_reads_register_blocks() -> None:
     assert config.input_registers[0].values == [10, 20]
     assert config.input_registers[0].interval_s == 1.5
     assert config.input_registers[0].step == 2
+    assert config.input_registers[0].encoding == "raw"
     assert config.holding_registers is not None
     assert config.holding_registers[0].address == 5
     assert config.holding_registers[0].values == [30, 40, 50]
+    assert config.holding_registers[0].encoding == "f32"
+    assert config.holding_registers[0].float_step == 0.5

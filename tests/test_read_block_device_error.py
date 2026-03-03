@@ -27,7 +27,7 @@ async def device_error_reader(*args, **kwargs) -> DeviceErrorResponse:
 
 def test_read_block_marks_device_error_but_keeps_response() -> None:
     settings = RegistersModbusDeviceSettings(
-        device_id=1, offset=0, read_count=2
+        device_id=1, offset=0, read_count=2, fc=4
     )
 
     block, got_response = asyncio.run(

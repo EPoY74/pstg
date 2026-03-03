@@ -21,7 +21,7 @@ async def successful_reader(*args, **kwargs) -> SuccessfulResponse:
 
 def test_read_block_returns_successful_block_with_registers() -> None:
     settings = RegistersModbusDeviceSettings(
-        device_id=1, offset=5, read_count=3
+        device_id=1, offset=5, read_count=3, fc=4
     )
 
     block, got_response = asyncio.run(
