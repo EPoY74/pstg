@@ -26,6 +26,7 @@ async def read_signals(
         offset=signals_setting.start_address_of_block,
         read_count=signals_setting.read_count,
         fc=signals_setting.fc,
+        enable_signals_reading=True,
     )
     was_read_signals = await read_registers_safely(
         device_being_polled, signals_polling_setting

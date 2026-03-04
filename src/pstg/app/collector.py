@@ -95,14 +95,15 @@ async def poll_forever(
                     poll_result = await poll_device(
                         device_being_polled, device_poll_settings
                     )
-                    poll_result.signals = copy.deepcopy(
-                        await read_signals(
-                            3,
-                            device_being_polled,
-                            device_poll_settings,
-                            get_signals_config(),
+                    if device_poll_settings.enable_signals_reading:
+                        poll_result.signals = copy.deepcopy(
+                            await read_signals(
+                                3,
+                                device_being_polled,
+                                device_poll_settings,
+                                get_signals_config(),
+                            )
                         )
-                    )
                     yield poll_result
                     if poll_result.connection_state == ConnectionState.DOWN:
                         logger.warning("Проблема с подключением к устройству.")
